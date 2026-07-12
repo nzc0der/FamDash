@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}
+Login
+{% endblock %}
+
+{% block content %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - FamilyDashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-bg: #050507;
+      --color-primary: #a78bfa;
+      --color-accent: #f472b6;
+      --color-text: #f9fafb;
+      --color-muted: #9ca3af;
+      --radius: 24px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background-image: 
+        radial-gradient(circle at 20% 30%, rgba(167, 139, 250, 0.15), transparent 40%),
+        radial-gradient(circle at 80% 70%, rgba(244, 114, 182, 0.15), transparent 40%);
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      padding: 3rem;
+      background: rgba(15, 15, 20, 0.7);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius);
+      box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+      text-align: center;
+      animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+      border-radius: 18px;
+      margin: 0 auto 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      box-shadow: 0 10px 30px rgba(167, 139, 250, 0.4);
+    }
+
+    h1 { font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.04em; }
+    p.subtitle { color: var(--color-muted); font-weight: 600; margin-bottom: 2.5rem; font-size: 0.95rem; }
+
+    .form-group { text-align: left; margin-bottom: 1.5rem; }
+    label { display: block; font-size: 0.8rem; font-weight: 800; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; margin-left: 0.5rem; }
+    
+    input, select {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 1rem 1.25rem;
+      color: #fff;
+      font-family: inherit;
+      font-size: 1rem;
+      transition: all var(--transition);
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--color-primary);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.15);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dk, #7c3aed));
+      color: #fff;
+      border: none;
+      border-radius: 16px;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all var(--transition);
+      margin-top: 1rem;
+      box-shadow: 0 10px 25px rgba(167, 139, 250, 0.3);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 35px rgba(167, 139, 250, 0.4);
+      filter: brightness(1.1);
+    }
+
+    .flash {
+      padding: 1rem;
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.2);
+      border-radius: 14px;
+      color: #f87171;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Profile Selector */
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .profile-item {
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .profile-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      border: 2px solid transparent;
+      margin: 0 auto 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: var(--color-muted);
+      font-size: 1.2rem;
+    }
+
+    .profile-item:hover .profile-avatar {
+      background: rgba(255,255,255,0.1);
+      transform: scale(1.05);
+    }
+
+    .profile-item.selected .profile-avatar {
+      border-color: var(--color-primary);
+      background: rgba(167, 139, 250, 0.15);
+      color: var(--color-primary);
+      box-shadow: 0 0 20px rgba(167, 139, 250, 0.2);
+    }
+
+    .profile-name { font-size: 0.75rem; font-weight: 700; color: var(--color-muted); }
+    .profile-item.selected .profile-name { color: var(--color-text); }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="logo">🏠</div>
+    <h1>Welcome Home</h1>
+    <p class="subtitle">Enter your family credentials</p>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="flash">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('login') }}">
+      <div class="profile-grid">
+        {% for u in users %}
+        <div class="profile-item" onclick="selectUser('{{ u.username }}', this)">
+          <div class="profile-avatar">{{ u.username[0]|upper }}</div>
+          <div class="profile-name">{{ u.username|capitalize }}</div>
+        </div>
+        {% endfor %}
+        <!-- Guest Option -->
+        <div class="profile-item" onclick="selectUser('guest', this)">
+          <div class="profile-avatar" style="background: rgba(255,255,255,0.03); border: 2px dashed var(--color-border);">👤</div>
+          <div class="profile-name">Guest</div>
+        </div>
+      </div>
+
+      <input type="hidden" name="username" id="selected-username" required>
+      
+      <div class="form-group" id="password-group" style="display: none; margin-top: 1rem; animation: slideUp 0.4s ease;">
+        <label id="password-label">Password</label>
+        <input type="password" name="password" id="password-input" placeholder="••••••••">
+      </div>
+
+      <button type="submit" class="btn" id="login-btn" style="display: none;">Access Dashboard</button>
+    </form>
+    
+    <div style="margin-top: 2rem; font-size: 0.8rem; color: var(--color-muted); font-weight: 600;">
+      FamilyDashboard v2.0 • Secured for Raspberry Pi
+    </div>
+  </div>
+
+  <script>
+    function selectUser(username, el) {
+      document.getElementById('selected-username').value = username;
+      
+      // Update UI
+      document.querySelectorAll('.profile-item').forEach(item => item.classList.remove('selected'));
+      el.classList.add('selected');
+      
+      const pwdGroup = document.getElementById('password-group');
+      const pwdInput = document.getElementById('password-input');
+      const loginBtn = document.getElementById('login-btn');
+      
+      if (username === 'guest') {
+        pwdGroup.style.display = 'none';
+        pwdInput.required = false;
+        loginBtn.style.display = 'block';
+        loginBtn.textContent = 'Enter as Guest';
+      } else {
+        pwdGroup.style.display = 'block';
+        pwdInput.required = true;
+        loginBtn.style.display = 'block';
+        loginBtn.textContent = 'Access Dashboard';
+        pwdInput.focus();
+      }
+    }
+  </script>
+</body>
+</html>
+  
+{% endblock %}

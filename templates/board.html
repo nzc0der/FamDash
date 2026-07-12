@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Announcement Board - FamilyDashboard{% endblock %}
+
+{% block extra_head %}
+<style>
+  .board-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .ann-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .ann-card {
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ann-card.pinned {
+    border-left: 5px solid var(--color-accent);
+    background: linear-gradient(135deg, rgba(244, 114, 182, 0.05), var(--color-surface));
+  }
+
+  .ann-card .pinned-label {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--color-accent);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .ann-card .title {
+    font-size: 1.5rem;
+    font-weight: 900;
+    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+  }
+
+  .ann-card .body {
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1.05rem;
+  }
+
+  .ann-card .body p { margin-bottom: 1rem; }
+
+  .ann-card .footer {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    font-weight: 700;
+  }
+
+  .author-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.05);
+    padding: 4px 10px;
+    border-radius: 99px;
+  }
+
+  .sidebar-card {
+    position: sticky;
+    top: 100px;
+  }
+
+  @media (max-width: 992px) {
+    .board-layout { grid-template-columns: 1fr; }
+    .sidebar-card { position: static; order: -1; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="board-layout">
+  <div class="ann-feed">
+    <div class="section-header">
+      <div class="section-title">
+        <span>📢</span>
+        Announcement Feed
+      </div>
+    </div>
+
+    {% for ann in announcements %}
+    <div class="card ann-card glass-panel {% if ann.pinned %}pinned{% endif %}">
+      {% if ann.pinned %}
+      <div class="pinned-label">
+        <span>📌</span> Pinned
+      </div>
+      {% endif %}
+      
+      <div class="title">{{ ann.title }}</div>
+      <div class="body markdown-body">{{ ann.body }}</div>
+      
+      <div class="footer">
+        <div class="author-pill">
+          <div class="avatar" style="width: 20px; height: 20px; font-size: 0.6rem;">{{ ann.author[0]|upper }}</div>
+          <span>{{ ann.author|capitalize }}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <span>{{ ann.created_at[:10] }}</span>
+          {% if session.role == 'admin' %}
+          <div style="display: flex; gap: 0.5rem;">
+            <form method="POST" action="{{ url_for('board_pin', ann_id=ann.id) }}">
+              <button type="submit" class="btn btn-ghost" style="padding: 0.4rem; border-radius: 8px; width: 32px; height: 32px; color: var(--color-accent); border: none;" title="Toggle Pin">
+                <span>📌</span>
+              </button>
+            </form>
+            <form method="POST" action="{{ url_for('board_delete', ann_id=ann.id) }}" data-confirm="Are you sure you want to delete this announcement?">
+              <button type="submit" class="btn btn-ghost" style="padding: 0.4rem; border-radius: 8px; width: 32px; height: 32px; color: var(--color-danger); border: none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    {% if not announcements %}
+    <div class="card glass-panel" style="text-align: center; padding: 5rem 2rem;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+      <h2 style="font-weight: 800; margin-bottom: 0.5rem;">No announcements</h2>
+      <p style="color: var(--color-muted);">Wait for an admin to post something here.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="sidebar">
+    {% if session.role != 'guest' %}
+    <div class="card sidebar-card glass-panel">
+      <h3 style="font-weight: 800; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span>✍️</span> Post Update
+      </h3>
+      <form method="POST" action="{{ url_for('board_post') }}">
+        <div class="form-group">
+          <label>Subject</label>
+          <input type="text" name="title" required placeholder="What's happening?">
+        </div>
+        <div class="form-group">
+          <label>Message (Markdown supported)</label>
+          <textarea name="body" style="min-height: 150px;" placeholder="Details go here..."></textarea>
+        </div>
+        <div class="form-group" style="display: flex; align-items: center; gap: 0.75rem; background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 12px; margin-top: 1rem;">
+          <input type="checkbox" name="pinned" id="pinned" style="width: 20px; height: 20px; cursor: pointer;">
+          <label for="pinned" style="margin-bottom: 0; cursor: pointer;">Pin to top of feed</label>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">Publish Announcement</button>
+      </form>
+    </div>
+    {% else %}
+    <div class="card sidebar-card glass-panel" style="background: rgba(167, 139, 250, 0.03); border-style: dashed;">
+      <p style="font-size: 0.9rem; color: var(--color-muted); line-height: 1.6; text-align: center;">
+        Guests can view the board, but they need a family account to post.
+      </p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Render Markdown for board announcements
+  document.querySelectorAll('.markdown-body').forEach(el => {
+    el.innerHTML = marked.parse(el.textContent);
+  });
+</script>
+{% endblock %}

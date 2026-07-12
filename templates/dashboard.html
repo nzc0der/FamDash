@@ -1,0 +1,530 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - FamilyDashboard{% endblock %}
+
+{% block extra_head %}
+<style>
+  .greeting-container {
+    margin-bottom: 3rem;
+    position: relative;
+  }
+
+  .greeting {
+    font-size: 3.5rem;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #fff 30%, var(--color-primary) 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+  }
+
+  .date-display {
+    font-size: 1.1rem;
+    color: var(--color-muted);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .date-display::before {
+    content: '';
+    width: 20px;
+    height: 3px;
+    background: var(--color-primary);
+    border-radius: 10px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .todo-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.75rem;
+    transition: all var(--transition);
+  }
+
+  .todo-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+  }
+
+  .todo-item.done {
+    opacity: 0.5;
+  }
+
+  .todo-item.done .todo-text {
+    text-decoration: line-through;
+    color: var(--color-muted);
+  }
+
+  .todo-check {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    border: 2px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: none;
+    color: #fff;
+    transition: all var(--transition);
+  }
+
+  .todo-item.done .todo-check {
+    background: var(--color-success);
+    border-color: var(--color-success);
+  }
+
+  .weather-card {
+    background: linear-gradient(135deg, #1e1e2d 0%, #111119 100%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .weather-card::before {
+    content: '';
+    position: absolute;
+    top: -20%;
+    right: -10%;
+    width: 150px;
+    height: 150px;
+    background: var(--color-primary);
+    filter: blur(80px);
+    opacity: 0.15;
+  }
+
+  .weather-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .weather-temp-big {
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .weather-icon-big {
+    font-size: 4rem;
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.2));
+  }
+
+  .weather-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    border-top: 1px solid var(--color-border);
+    padding-top: 1.25rem;
+  }
+
+  .quick-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 1rem;
+  }
+
+  .link-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+    padding: 1rem 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    transition: all var(--transition);
+  }
+
+  .link-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--color-primary);
+    transform: translateY(-4px);
+  }
+
+  .link-icon {
+    font-size: 1.5rem;
+  }
+
+  .link-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-muted);
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .ann-item.is-pinned {
+    border-left: 4px solid var(--color-accent);
+    background: rgba(244, 114, 182, 0.03);
+  }
+
+  @media (max-width: 768px) {
+    .greeting {
+      font-size: 2.5rem;
+    }
+
+    .greeting-container {
+      margin-bottom: 2rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="greeting-container">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 class="greeting" id="greeting-text">Hello, {{ session.username }}.</h1>
+      <div class="date-display" id="date-display"></div>
+    </div>
+
+    <!-- Yearly Progress -->
+    <div class="year-card glass-panel" style="padding: 1rem 1.5rem; min-width: 240px;">
+      <div
+        style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 800; color: var(--color-muted); text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+        <span>Year Progress</span>
+        <span id="year-pct">0%</span>
+      </div>
+      <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
+        <div id="year-bar"
+          style="height: 100%; background: linear-gradient(90deg, var(--color-accent), var(--color-primary)); width: 0%; transition: width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);">
+        </div>
+      </div>
+      <div style="font-size: 0.8rem; font-weight: 700; margin-top: 0.5rem; color: var(--color-text);" id="year-display">
+        2024</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <!-- To-Dos -->
+  <div class="card todo-card glass-panel">
+    <div class="section-header">
+      <div class="section-title">
+        <span>✅</span>
+        Daily Tasks
+      </div>
+      <span class="badge"
+        style="background: rgba(167, 139, 250, 0.1); color: var(--color-primary); padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 800;">{{
+        todos|length }} Items</span>
+    </div>
+
+    {% if session.role != 'guest' %}
+    <div class="progress-section"
+      style="margin-bottom: 2rem; background: rgba(255,255,255,0.02); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
+      {% set done_count = todos | selectattr('done', 'equalto', 1) | list | length %}
+      {% set total = todos | length %}
+      {% set pct = ((done_count / total * 100) | int) if total > 0 else 0 %}
+      <div class="progress-info"
+        style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-size: 0.85rem; font-weight: 800;">
+        <span>Task Completion</span>
+        <span style="color: var(--color-primary);">{{ pct }}%</span>
+      </div>
+      <div class="progress-track"
+        style="height: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; overflow: hidden;">
+        <div class="progress-fill"
+          style="height: 100%; background: linear-gradient(90deg, var(--color-primary), var(--color-accent)); width: 0%; transition: width 1s ease-out;"
+          data-pct="{{ pct }}"></div>
+      </div>
+    </div>
+
+    <form id="todo-add-form" method="POST" action="{{ url_for('todo_add') }}"
+      style="display: flex; gap: 0.5rem; margin-bottom: 2rem;">
+      <input id="todo-input" type="text" name="content" placeholder="Add a new task..." maxlength="300" required
+        style="flex: 1; height: 54px;">
+      <button type="submit" class="btn btn-primary"
+        style="padding: 0 1.5rem; height: 54px; border-radius: 16px;">Add</button>
+    </form>
+    {% endif %}
+
+    <div class="todo-list" id="todo-list">
+      {% for todo in todos %}
+      <div class="todo-item {% if todo.done %}done{% endif %}">
+        <form method="POST" action="{{ url_for('todo_toggle', todo_id=todo.id) }}">
+          <button type="submit" class="todo-check">
+            {% if todo.done %}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            {% endif %}
+          </button>
+        </form>
+        <span class="todo-text" style="flex: 1; font-weight: 600;">{{ todo.content }}</span>
+        {% if session.role != 'guest' %}
+        <form method="POST" action="{{ url_for('todo_delete', todo_id=todo.id) }}">
+          <button type="submit" class="btn btn-ghost"
+            style="padding: 0.4rem; border-radius: 10px; width: 36px; height: 36px; color: var(--color-muted); border: none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </form>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% if not todos %}
+      <div style="text-align: center; padding: 3rem 0; color: var(--color-muted);">
+        <p style="font-size: 2.5rem; margin-bottom: 1rem;">🍃</p>
+        <p style="font-weight: 800; color: var(--color-text); font-size: 1.1rem;">You're all set!</p>
+        <p style="font-size: 0.9rem;">No pending tasks for today.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Announcements -->
+  <div class="card glass-panel">
+    <div class="section-header">
+      <div class="section-title">
+        <span>📢</span>
+        Family Feed
+      </div>
+      <a href="{{ url_for('board') }}" class="btn btn-ghost"
+        style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 12px;">View All</a>
+    </div>
+
+    <div class="ann-list" style="display: flex; flex-direction: column; gap: 1rem;">
+      {% for ann in announcements[:3] %}
+      <div class="ann-item {% if ann.pinned %}is-pinned{% endif %}"
+        style="padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: var(--radius-sm); border: 1px solid var(--color-border); transition: all var(--transition); cursor: pointer;"
+        onclick="window.location.href='{{ url_for('board') }}'">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+          <div class="ann-title" style="font-weight: 800; font-size: 1.1rem;">{{ ann.title }}</div>
+          {% if ann.pinned %}<span style="font-size: 0.8rem;">📌</span>{% endif %}
+        </div>
+        {% if ann.body %}
+        <div class="ann-body"
+          style="font-size: 0.9rem; color: var(--color-muted); line-height: 1.6; margin-bottom: 1.25rem;">
+          {{ ann.body[:140] }}{% if ann.body|length > 140 %}&hellip;{% endif %}
+        </div>
+        {% endif %}
+        <div class="ann-footer"
+          style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; font-weight: 800; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.1em;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div class="avatar" style="width: 20px; height: 20px; font-size: 0.6rem;">{{ ann.author[0]|upper }}</div>
+            <span>{{ ann.author|capitalize }}</span>
+          </div>
+          <span>{{ ann.created_at[:10] }}</span>
+        </div>
+      </div>
+      {% endfor %}
+      {% if not announcements %}
+      <div style="text-align: center; padding: 3rem 0; color: var(--color-muted);">
+        <p style="font-size: 2.5rem; margin-bottom: 1rem;">📭</p>
+        <p style="font-weight: 800; color: var(--color-text);">Quiet day...</p>
+        <p style="font-size: 0.9rem;">No new announcements yet.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-3" style="margin-top: 1.5rem;">
+  <!-- Weather -->
+  <div class="card weather-card glass-panel" id="weather-widget">
+    <div style="text-align: center; padding: 2.5rem 0; opacity: 0.5;">
+      <div class="spinner"
+        style="width: 28px; height: 28px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1.25rem;">
+      </div>
+      <span style="font-weight: 700; font-size: 0.9rem;">Gathering clouds...</span>
+    </div>
+  </div>
+
+  <!-- Quick Links -->
+  <div class="card glass-panel">
+    <div class="section-header">
+      <div class="section-title">
+        <span>🔗</span>
+        Quick Access
+      </div>
+    </div>
+
+    <div class="quick-links">
+      {% for bm in bookmarks %}
+      <a href="{{ bm.url }}" target="_blank" class="link-item">
+        <div class="link-icon"
+          style="background: rgba(255,255,255,0.05); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+          {{ bm.icon }}</div>
+        <span class="link-label" style="margin-top: 0.25rem;">{{ bm.title }}</span>
+      </a>
+      {% endfor %}
+      {% if session.role != 'guest' %}
+      <a href="{{ url_for('admin_panel') }}" class="link-item"
+        style="border-style: dashed; background: transparent; opacity: 0.6;">
+        <div class="link-icon"
+          style="width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 2px dashed var(--color-border);">
+          +</div>
+        <span class="link-label">Manage</span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Upcoming Events -->
+  <div class="card glass-panel">
+    <div class="section-header">
+      <div class="section-title">
+        <span>📅</span>
+        Timeline
+      </div>
+      <a href="{{ url_for('calendar') }}" class="btn btn-ghost"
+        style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 12px;">Full View</a>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      {% for ev in events[:3] %}
+      <div
+        style="padding: 1.25rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px solid var(--color-border); border-left: 4px solid var(--color-primary); transition: all var(--transition); cursor: pointer;"
+        onclick="window.location.href='{{ url_for('calendar') }}'">
+        <div style="font-weight: 800; font-size: 1rem; margin-bottom: 0.5rem;">{{ ev.title }}</div>
+        <div
+          style="font-size: 0.75rem; color: var(--color-primary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🗓️</span> {{ ev.event_date[:10] }}
+        </div>
+      </div>
+      {% endfor %}
+      {% if not events %}
+      <div style="text-align: center; color: var(--color-muted); padding: 2rem 0;">
+        <p style="font-size: 2rem; margin-bottom: 0.75rem;">📅</p>
+        <p style="font-size: 0.9rem; font-weight: 700;">Clear schedule</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    // Progress bar animation
+    document.querySelectorAll('.progress-fill').forEach(el => {
+      setTimeout(() => {
+        el.style.width = el.getAttribute('data-pct') + '%';
+      }, 300);
+    });
+
+    // Greeting logic
+    const greetEl = document.getElementById('greeting-text');
+    const dateEl = document.getElementById('date-display');
+    const h = new Date().getHours();
+    const salutation = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+    if (greetEl) greetEl.textContent = salutation + ', {{ session.username|capitalize }}.';
+
+    if (dateEl) {
+      const now = new Date();
+      dateEl.textContent = now.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      // Year progress calculation
+      const start = new Date(now.getFullYear(), 0, 1);
+      const end = new Date(now.getFullYear() + 1, 0, 1);
+      const progress = (now - start) / (end - start);
+      const yearPct = Math.floor(progress * 100);
+
+      const yearBar = document.getElementById('year-bar');
+      const yearPctText = document.getElementById('year-pct');
+      const yearDisplay = document.getElementById('year-display');
+
+      if (yearBar) {
+        setTimeout(() => {
+          yearBar.style.width = yearPct + '%';
+          if (yearPctText) yearPctText.textContent = yearPct + '%';
+          const daysLeft = Math.floor((end - now) / 86400000);
+          if (yearDisplay) yearDisplay.textContent = now.getFullYear() + ' • ' + daysLeft + ' days remaining';
+        }, 500);
+      }
+    }
+
+    // Weather Fetching
+    function fetchWeather() {
+      const lat = -37.9034;
+      const lon = 145.0416;
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=celsius&windspeed_unit=kmh`;
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.current_weather) return;
+          const w = data.current_weather;
+          const wmoCodes = {
+            0: ['Clear sky', '☀️'], 1: ['Mainly clear', '🌤️'], 2: ['Partly cloudy', '⛅'], 3: ['Overcast', '☁️'],
+            45: ['Fog', '🌫️'], 48: ['Depositing rime fog', '🌫️'],
+            51: ['Light drizzle', '🌧️'], 53: ['Moderate drizzle', '🌧️'], 55: ['Dense drizzle', '🌧️'],
+            61: ['Slight rain', '☔'], 63: ['Moderate rain', '☔'], 65: ['Heavy rain', '🌧️'],
+            71: ['Slight snow', '❄️'], 73: ['Moderate snow', '❄️'], 75: ['Heavy snow', '❄️'],
+            95: ['Thunderstorm', '⛈️']
+          };
+          const [desc, icon] = wmoCodes[w.weathercode] || ['Unknown', '🌡️'];
+
+          const widget = document.getElementById('weather-widget');
+          if (widget) {
+            widget.innerHTML = `
+              <div class="weather-main">
+                <div class="weather-temp-wrap">
+                  <div class="weather-temp-big">${Math.round(w.temperature)}°</div>
+                  <div style="font-weight: 700; color: var(--color-primary); margin-top: 0.25rem;">${desc}</div>
+                </div>
+                <div class="weather-icon-big">${icon}</div>
+              </div>
+              <div class="weather-details">
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                  <span>📍</span> Ormond, VIC
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; justify-content: flex-end;">
+                  <span>💨</span> ${w.windspeed} km/h
+                </div>
+              </div>
+            `;
+          }
+        })
+        .catch(err => {
+          console.error('Weather fetch error:', err);
+          const widget = document.getElementById('weather-widget');
+          if (widget) widget.innerHTML = '<p style="text-align: center; color: var(--color-danger);">Weather unavailable</p>';
+        });
+    }
+    fetchWeather();
+  })();
+</script>
+{% endblock %}

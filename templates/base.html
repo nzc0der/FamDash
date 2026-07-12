@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>{% block title %}Family Dashboard{% endblock %}</title>
+  <meta name="description" content="Private family dashboard - to-dos, notes, and announcements." />
+
+  <!-- PWA -->
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#4285f4">
+
+  <!-- Apple PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Family Dashboard">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-180.png') }}">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+
+  <style>
+    /* ---------------------------------------------------------------
+       Design tokens
+    --------------------------------------------------------------- */
+    :root {
+      --color-bg: #050508;
+      --color-surface: rgba(17, 17, 24, 0.7);
+      --color-surface-2: rgba(30, 30, 38, 0.85);
+      --color-border: rgba(255, 255, 255, 0.08);
+      --color-primary: #a78bfa;
+      --color-primary-dk: #8b5cf6;
+      --color-accent: #f472b6;
+      --color-success: #10b981;
+      --color-warning: #f59e0b;
+      --color-danger: #ef4444;
+      --color-info: #3b82f6;
+      --color-text: #fcfcfd;
+      --color-muted: #94a3b8;
+      --radius-sm: 14px;
+      --radius: 20px;
+      --radius-lg: 36px;
+      --shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ---------------------------------------------------------------
+       Reset & base
+    --------------------------------------------------------------- */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', -apple-system, sans-serif;
+      background: var(--color-bg);
+      background-image:
+        radial-gradient(circle at 0% 0%, rgba(167, 139, 250, 0.12), transparent 45%),
+        radial-gradient(circle at 100% 100%, rgba(244, 114, 182, 0.12), transparent 45%),
+        radial-gradient(circle at 50% 50%, rgba(167, 139, 250, 0.05), transparent 60%);
+      background-attachment: fixed;
+      color: var(--color-text);
+      min-height: 100vh;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      opacity: 0.025;
+      z-index: 9999;
+      pointer-events: none;
+    }
+
+    a {
+      color: var(--color-primary);
+      text-decoration: none;
+      transition: all var(--transition);
+    }
+
+    a:hover {
+      color: var(--color-accent);
+    }
+
+    /* ---------------------------------------------------------------
+       Navigation
+    --------------------------------------------------------------- */
+    nav {
+      background: rgba(5, 5, 7, 0.8);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--color-border);
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .nav-brand {
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--color-text);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-brand .brand-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 12px rgba(167, 139, 250, 0.4);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      padding: 0.6rem 1rem;
+      border-radius: var(--radius-sm);
+      color: var(--color-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-links a:hover {
+      color: var(--color-text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-links a.active {
+      background: rgba(167, 139, 250, 0.1);
+      color: var(--color-primary);
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .nav-user {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.4rem;
+      padding-right: 0.75rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--color-border);
+      transition: all var(--transition);
+    }
+
+    .nav-user:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #fff;
+    }
+
+    .hamburger {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--color-border);
+      cursor: pointer;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .hamburger span {
+      width: 20px;
+      height: 2px;
+      background: var(--color-text);
+      border-radius: 2px;
+      transition: 0.3s;
+    }
+
+    /* ---------------------------------------------------------------
+       Mobile Layout Extras
+    --------------------------------------------------------------- */
+    .mobile-nav-container {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .mobile-nav-container.active {
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .mobile-nav-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      transition: 0.4s;
+    }
+
+    .mobile-nav-container.active .mobile-nav-overlay {
+      opacity: 1;
+    }
+
+    .mobile-nav-content {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 300px;
+      background: #0f0f14;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      transform: translateX(100%);
+      transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+      overflow-y: auto;
+    }
+
+    .mobile-nav-container.active .mobile-nav-content {
+      transform: translateX(0);
+    }
+
+    .mobile-nav-links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      list-style: none;
+    }
+
+    .mobile-nav-links a {
+      padding: 1rem 1.25rem;
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--color-text);
+      font-weight: 600;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .mobile-nav-links a.active {
+      background: rgba(167, 139, 250, 0.1);
+      color: var(--color-primary);
+      border: 1px solid rgba(167, 139, 250, 0.2);
+    }
+
+    /* ---------------------------------------------------------------
+       Cards & Components
+    --------------------------------------------------------------- */
+    .page-wrapper {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+    }
+
+    .card {
+      background: var(--color-surface);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      box-shadow: var(--shadow);
+      transition: all var(--transition);
+    }
+
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+      transform: translateY(-2px);
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 14px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      border: none;
+      font-size: 0.9rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dk));
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(167, 139, 250, 0.3);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.1);
+      box-shadow: 0 8px 20px rgba(167, 139, 250, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    /* Inputs */
+    input,
+    select,
+    textarea {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--color-border);
+      border-radius: 14px;
+      padding: 0.85rem 1rem;
+      color: var(--color-text);
+      font-family: inherit;
+      width: 100%;
+      transition: all var(--transition);
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.15);
+    }
+
+    /* ---------------------------------------------------------------
+       Responsive
+    --------------------------------------------------------------- */
+    @media (max-width: 992px) {
+      .nav-links {
+        display: none;
+      }
+
+      .hamburger {
+        display: flex;
+      }
+
+      .desktop-only {
+        display: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page-wrapper {
+        padding: 1.5rem 1rem;
+      }
+
+      .nav-brand span:not(.brand-icon) {
+        display: none;
+      }
+
+      .nav-user span {
+        display: none;
+      }
+
+      .nav-user {
+        padding-right: 0.4rem;
+      }
+    }
+
+    /* Grid System */
+    .grid {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    @media (max-width: 1024px) {
+      .grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+
+      .grid-2,
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Dropdown content */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 100%;
+      background-color: var(--color-surface);
+      min-width: 180px;
+      box-shadow: var(--shadow);
+      z-index: 200;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 0.5rem 0;
+      backdrop-filter: blur(20px);
+    }
+
+    .dropdown-content a {
+      color: var(--color-text);
+      padding: 0.75rem 1.25rem;
+      text-decoration: none;
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .dropdown-content a:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .base-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+      animation: fadeOverlay 0.2s ease;
+      backdrop-filter: blur(8px);
+    }
+
+    .base-modal-overlay.hidden {
+      display: none;
+    }
+
+    .base-modal-box {
+      background: #0f0f14;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem;
+      width: 90%;
+      max-width: 440px;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+      animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    @keyframes fadeOverlay {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .base-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+
+    .base-modal-header h2 {
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+
+    .base-modal-close {
+      background: none;
+      border: none;
+      color: var(--color-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .base-modal-close:hover {
+      color: var(--color-text);
+    }
+
+    /* ---------------------------------------------------------------
+       UI Mode Specifics
+    --------------------------------------------------------------- */
+    body.ui-mode-mobile .desktop-only {
+      display: none !important;
+    }
+
+    body.ui-mode-pc .mobile-only {
+      display: none !important;
+    }
+
+    /* PC Mode Enhancements */
+    body.ui-mode-pc .page-wrapper {
+      padding: 3rem 2rem;
+      max-width: 1400px;
+    }
+
+    /* Mobile Mode Enhancements */
+    body.ui-mode-mobile .page-wrapper {
+      padding: 1.25rem 1rem;
+    }
+
+    body.ui-mode-mobile .card {
+      padding: 1.25rem;
+      border-radius: var(--radius);
+    }
+
+    /* Selection Modal Specifics */
+    .mode-selection-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .mode-option {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 2rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      text-decoration: none;
+      color: var(--color-text);
+    }
+
+    .mode-option:hover {
+      background: rgba(167, 139, 250, 0.1);
+      border-color: var(--color-primary);
+      transform: translateY(-5px);
+    }
+
+    .mode-option i {
+      font-size: 2.5rem;
+    }
+
+    .mode-option span {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    /* Extra Polish */
+    .glass-panel {
+      background: var(--color-surface);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .flash-list {
+      list-style: none;
+      margin-bottom: 2rem;
+    }
+
+    .flash {
+      padding: 1rem 1.5rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: 0.75rem;
+      font-weight: 600;
+      animation: slideIn 0.4s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .flash-success {
+      background: rgba(52, 211, 153, 0.15);
+      color: var(--color-success);
+      border: 1px solid rgba(52, 211, 153, 0.2);
+    }
+
+    .flash-warning {
+      background: rgba(251, 191, 36, 0.15);
+      color: var(--color-warning);
+      border: 1px solid rgba(251, 191, 36, 0.2);
+    }
+
+    .flash-danger {
+      background: rgba(248, 113, 113, 0.15);
+      color: var(--color-danger);
+      border: 1px solid rgba(248, 113, 113, 0.2);
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body data-role="{{ session.role }}"
+  class="ui-mode-{{ session.ui_mode }} {% if not session.ui_mode_selected %}show-mode-selector{% endif %}">
+  {% if session.username %}
+  <nav>
+    <div class="nav-left">
+      <a href="{{ url_for('dashboard') }}" class="nav-brand">
+        <div class="brand-icon">🏠</div>
+        <span>FamilyDashboard</span>
+      </a>
+
+      <ul class="nav-links">
+        <li>
+          <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
+            <span>Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('shopping') }}" class="{% if request.endpoint == 'shopping' %}active{% endif %}">
+            <span>Shopping</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('calendar') }}" class="{% if request.endpoint == 'calendar' %}active{% endif %}">
+            <span>Calendar</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('notes_list') }}" class="{% if request.endpoint == 'notes_list' %}active{% endif %}">
+            <span>Notes</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('board') }}" class="{% if request.endpoint == 'board' %}active{% endif %}">
+            <span>Board</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="nav-right">
+      <div class="dropdown desktop-only" id="user-dropdown">
+        <div class="nav-user" style="cursor: pointer;" onclick="toggleDropdown()">
+          <div class="avatar">{{ session.username[0]|upper }}</div>
+          <span style="font-weight: 600; font-size: 0.9rem;">{{ session.username|capitalize }}</span>
+        </div>
+        <div class="dropdown-content" id="user-dropdown-content">
+          {% if session.role != 'guest' %}
+          <a href="#" onclick="document.getElementById('password-modal').classList.remove('hidden')">Change Password</a>
+          {% endif %}
+          {% if session.role == 'admin' %}
+          <a href="{{ url_for('admin_panel') }}">Admin Panel</a>
+          {% endif %}
+          <div style="border-top: 1px solid var(--color-border); margin: 0.5rem 0;"></div>
+          <a href="{{ url_for('set_ui_mode', mode='pc' if session.ui_mode == 'mobile' else 'mobile') }}">
+            Switch to {{ 'PC' if session.ui_mode == 'mobile' else 'Mobile' }} UI
+          </a>
+          <a href="{{ url_for('logout') }}" style="color: var(--color-danger);">Log out</a>
+        </div>
+      </div>
+
+      <button class="hamburger" id="hamburger" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Mobile Nav -->
+  <div class="mobile-nav-container" id="mobile-nav">
+    <div class="mobile-nav-overlay" id="mobile-overlay"></div>
+    <div class="mobile-nav-content">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="nav-brand">
+          <div class="brand-icon">🏠</div>
+          <span>FamilyDashboard</span>
+        </div>
+        <button class="btn btn-ghost" id="mobile-close"
+          style="padding: 0.5rem; border-radius: 50%; width: 40px; height: 40px; font-size: 1.5rem;">&times;</button>
+      </div>
+
+      <div class="mobile-user-card"
+        style="padding: 1.25rem; background: rgba(255,255,255,0.03); border-radius: var(--radius); border: 1px solid var(--color-border); display: flex; align-items: center; gap: 1rem; margin: 1rem 0;">
+        <div class="avatar" style="width: 48px; height: 48px; font-size: 1.2rem;">{{ session.username[0]|upper }}</div>
+        <div>
+          <div style="font-weight: 800; font-size: 1.1rem;">{{ session.username|capitalize }}</div>
+          <div style="font-size: 0.8rem; color: var(--color-muted);">{{ session.role|capitalize }} Account</div>
+        </div>
+      </div>
+
+      <ul class="mobile-nav-links">
+        <li><a href="{{ url_for('dashboard') }}"
+            class="{% if request.endpoint == 'dashboard' %}active{% endif %}"><span>📊</span> Dashboard</a></li>
+        <li><a href="{{ url_for('shopping') }}"
+            class="{% if request.endpoint == 'shopping' %}active{% endif %}"><span>🛒</span> Shopping</a></li>
+        <li><a href="{{ url_for('calendar') }}"
+            class="{% if request.endpoint == 'calendar' %}active{% endif %}"><span>📅</span> Calendar</a></li>
+        <li><a href="{{ url_for('notes_list') }}"
+            class="{% if request.endpoint == 'notes_list' %}active{% endif %}"><span>📝</span> Notes</a></li>
+        <li><a href="{{ url_for('board') }}"
+            class="{% if request.endpoint == 'board' %}active{% endif %}"><span>📢</span> Board</a></li>
+        {% if session.role == 'admin' %}
+        <li><a href="{{ url_for('admin_panel') }}"
+            class="{% if request.endpoint == 'admin_panel' %}active{% endif %}"><span>⚙️</span> Admin</a></li>
+        {% endif %}
+      </ul>
+
+      <div style="margin-top: auto;">
+        <a href="{{ url_for('logout') }}" class="btn btn-ghost"
+          style="width: 100%; color: var(--color-danger); border-color: rgba(248, 113, 113, 0.2);">Log out</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- UI Selection Modal -->
+  {% if not session.ui_mode_selected %}
+  <div id="ui-mode-modal" class="base-modal-overlay">
+    <div class="base-modal-box" style="max-width: 500px;">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">✨</div>
+        <h2 style="font-size: 1.75rem;">Welcome to FamilyDashboard</h2>
+        <p style="color: var(--color-muted); margin-top: 0.5rem;">We've detected a new device. Which UI would you
+          prefer?</p>
+      </div>
+
+      <div class="mode-selection-grid">
+        <a href="{{ url_for('set_ui_mode', mode='pc') }}" class="mode-option">
+          <i>💻</i>
+          <span>Desktop (PC)</span>
+          <small style="color: var(--color-muted); font-size: 0.8rem;">Full feature layout</small>
+        </a>
+        <a href="{{ url_for('set_ui_mode', mode='mobile') }}" class="mode-option">
+          <i>📱</i>
+          <span>Mobile App</span>
+          <small style="color: var(--color-muted); font-size: 0.8rem;">Optimized for touch</small>
+        </a>
+      </div>
+
+      <div style="margin-top: 2rem; text-align: center;">
+        <p style="font-size: 0.8rem; color: var(--color-muted);">You can always change this in your profile settings
+          later.</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  <div class="page-wrapper">
+    {% with messages = get_flashed_messages(with_categories=True) %}
+    {% if messages %}
+    <ul class="flash-list">
+      {% for category, message in messages %}
+      <li class="flash flash-{{ category }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+
+  {% if session.role != 'guest' %}
+  <!-- Password Change Modal -->
+  <div id="password-modal" class="base-modal-overlay hidden">
+    <div class="base-modal-box">
+      <div class="base-modal-header">
+        <h2>Change Password</h2>
+        <button class="base-modal-close" onclick="document.getElementById('password-modal').classList.add('hidden')"
+          aria-label="Close">&times;</button>
+      </div>
+      <form method="POST" action="{{ url_for('change_password') }}">
+        <div class="form-group">
+          <label for="new_password">New Password</label>
+          <input type="password" id="new_password" name="new_password" required minlength="6" />
+        </div>
+        <div class="form-group">
+          <label for="confirm_password">Confirm New Password</label>
+          <input type="password" id="confirm_password" name="confirm_password" required minlength="6" />
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+          <button type="button" class="btn btn-ghost"
+            onclick="document.getElementById('password-modal').classList.add('hidden')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Global Confirm Modal -->
+  <div id="global-confirm-modal" class="base-modal-overlay hidden">
+    <div class="base-modal-box" style="max-width: 400px; text-align: center;">
+      <h2 id="global-confirm-title" style="margin-bottom: 1rem; font-size: 1.25rem;">Confirm Action</h2>
+      <p id="global-confirm-msg" class="text-muted"
+        style="margin-bottom: 1.5rem; font-size: 0.95rem; white-space: pre-wrap;"></p>
+      <div style="display: flex; justify-content: center; gap: 1rem;">
+        <button id="global-confirm-cancel" class="btn btn-ghost">Cancel</button>
+        <button id="global-confirm-ok" class="btn btn-danger">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+    
+  <!-- Modern Icons & Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    // Toggle Mobile Nav
+    const hamburger = document.getElementById('hamburger');
+    const mobileNav = document.getElementById('mobile-nav');
+    const mobileOverlay = document.getElementById('mobile-overlay');
+    const mobileClose = document.getElementById('mobile-close');
+
+    function toggleMobileNav() {
+      mobileNav.classList.toggle('active');
+      document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : '';
+    }
+
+    if (hamburger) hamburger.addEventListener('click', toggleMobileNav);
+    if (mobileOverlay) mobileOverlay.addEventListener('click', toggleMobileNav);
+    if (mobileClose) mobileClose.addEventListener('click', toggleMobileNav);
+
+    // Desktop Dropdown
+    function toggleDropdown() {
+      const content = document.getElementById('user-dropdown-content');
+      const isVisible = content.style.display === 'block';
+      content.style.display = isVisible ? 'none' : 'block';
+    }
+
+    window.onclick = function (event) {
+      if (!event.target.closest('#user-dropdown')) {
+        const content = document.getElementById('user-dropdown-content');
+        if (content) content.style.display = 'none';
+      }
+    }
+
+    // Global Confirm Function
+    window.customConfirm = function (message, onConfirm, isAlert = false) {
+      const modal = document.getElementById('global-confirm-modal');
+      const msgEl = document.getElementById('global-confirm-msg');
+      const cancelBtn = document.getElementById('global-confirm-cancel');
+      const okBtn = document.getElementById('global-confirm-ok');
+
+      msgEl.textContent = message;
+      modal.classList.remove('hidden');
+
+      if (isAlert) {
+        cancelBtn.style.display = 'none';
+        okBtn.textContent = 'OK';
+        okBtn.className = 'btn btn-primary';
+      } else {
+        cancelBtn.style.display = 'inline-flex';
+        okBtn.textContent = 'Confirm';
+        okBtn.className = 'btn btn-danger';
+      }
+
+      const close = () => { modal.classList.add('hidden'); cleanup(); };
+
+      const onOk = () => { close(); if (onConfirm) onConfirm(); };
+      const onCancel = () => { close(); };
+
+      const cleanup = () => {
+        okBtn.removeEventListener('click', onOk);
+        cancelBtn.removeEventListener('click', onCancel);
+      };
+
+      okBtn.addEventListener('click', onOk);
+      cancelBtn.addEventListener('click', onCancel);
+    };
+
+    // Form confirmation
+    document.addEventListener('submit', function (e) {
+      if (e.target.hasAttribute('data-confirm')) {
+        e.preventDefault();
+        window.customConfirm(e.target.getAttribute('data-confirm'), () => {
+          e.target.removeAttribute('data-confirm');
+          e.target.submit();
+        });
+      }
+    });
+
+    document.addEventListener('click', function (e) {
+      const trigger = e.target.closest('[data-confirm-click]');
+      if (trigger) {
+        e.preventDefault();
+        window.customConfirm(trigger.getAttribute('data-confirm-click'), () => {
+          if (trigger.tagName === 'A') {
+            window.location.href = trigger.href;
+          } else {
+            trigger.removeAttribute('data-confirm-click');
+            trigger.click();
+          }
+        });
+      }
+    });
+
+    // Time display
+    (function () {
+      const el = document.getElementById('local-time');
+      if (!el) return;
+      function tick() {
+        const now = new Date();
+        el.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      tick();
+      setInterval(tick, 10000);
+    })();
+  </script>
+  {% block extra_scripts %}{% endblock %}
+  <script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => {
+        console.log('Service Worker registered:', registration.scope);
+      })
+      .catch(error => {
+        console.error('Service Worker registration failed:', error);
+      });
+  });
+}
+</script>
+</body>
+
+</html>

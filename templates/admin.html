@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}System Admin - FamilyDashboard{% endblock %}
+
+{% block extra_head %}
+<style>
+  .admin-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 2rem;
+  }
+
+  .admin-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .tab-btn {
+    padding: 1rem 1.25rem;
+    border-radius: 14px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--color-muted);
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .tab-btn:hover {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--color-text);
+  }
+
+  .tab-btn.active {
+    background: rgba(167, 139, 250, 0.1);
+    border-color: rgba(167, 139, 250, 0.2);
+    color: var(--color-primary);
+  }
+
+  .admin-card {
+    padding: 2.5rem;
+  }
+
+  .user-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 16px;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--color-border);
+  }
+
+  .backup-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  @media (max-width: 768px) {
+    .admin-layout { grid-template-columns: 1fr; }
+    .admin-sidebar { flex-direction: row; overflow-x: auto; padding-bottom: 1rem; }
+    .tab-btn { white-space: nowrap; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="section-header">
+  <div class="section-title">
+    <span>⚙️</span> System Administration
+  </div>
+</div>
+
+<div class="admin-layout">
+  <div class="admin-sidebar">
+    <button class="tab-btn active" onclick="showTab('users', this)"><span>👥</span> User Management</button>
+    <button class="tab-btn" onclick="showTab('backups', this)"><span>💾</span> Database & Backups</button>
+    <button class="tab-btn" onclick="showTab('maintenance', this)"><span>🛠️</span> Maintenance</button>
+  </div>
+
+  <div class="admin-content">
+    <!-- User Management -->
+    <div id="tab-users" class="admin-tab card admin-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h3 style="font-weight: 800; font-size: 1.25rem;">Family Accounts</h3>
+        <button class="btn btn-primary" onclick="document.getElementById('add-user-modal').classList.remove('hidden')">+ New User</button>
+      </div>
+
+      <div class="users-list">
+        {% for u in all_users %}
+        <div class="user-row">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="avatar">{{ u.username[0]|upper }}</div>
+            <div>
+              <div style="font-weight: 800;">{{ u.username|capitalize }}</div>
+              <div class="pill {% if u.role == 'admin' %}pill-admin{% else %}pill-pinned{% endif %}" style="margin-top: 4px;">{{ u.role|capitalize }}</div>
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-ghost btn-sm" onclick="openResetModal('{{ u.username }}')">Reset Pwd</button>
+            {% if u.username != session.username %}
+            <form method="POST" action="{{ url_for('admin_delete_user', user_id=u.id) }}" data-confirm="Delete this user account?">
+              <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--color-danger); border: none;">Delete</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Backups -->
+    <div id="tab-backups" class="admin-tab card admin-card hidden">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h3 style="font-weight: 800; font-size: 1.25rem;">Database Backups</h3>
+        <form method="POST" action="{{ url_for('admin_backup_create') }}">
+          <button type="submit" class="btn btn-primary">Create Backup Now</button>
+        </form>
+      </div>
+
+      <div class="backups-list">
+        {% for b in backups %}
+        <div class="backup-item">
+          <div>
+            <div style="font-weight: 700; font-size: 0.95rem;">{{ b.filename }}</div>
+            <div style="font-size: 0.75rem; color: var(--color-muted);">{{ b.size }} • Created {{ b.date }}</div>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <a href="/admin/backups/download/{{ b.filename }}" class="btn btn-ghost btn-sm">Download</a>
+            <form method="POST" action="{{ url_for('admin_restore') }}" data-confirm="CRITICAL: Overwrite live data with this backup?">
+              <input type="hidden" name="backup_name" value="{{ b.filename }}">
+              <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--color-accent); border: none;">Restore</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin_backup_delete', filename=b.filename) }}" data-confirm="Permanently delete this backup file?">
+              <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--color-danger); border: none;">Delete</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+        {% if not backups %}
+        <p style="text-align: center; color: var(--color-muted); padding: 2rem;">No backups found.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Maintenance -->
+    <div id="tab-maintenance" class="admin-tab card admin-card hidden">
+      <h3 style="font-weight: 800; font-size: 1.25rem; margin-bottom: 2rem;">System Operations</h3>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        <div class="card" style="background: rgba(255,255,255,0.02);">
+          <h4 style="font-weight: 800; margin-bottom: 1rem;">Auto Update</h4>
+          <p style="font-size: 0.85rem; color: var(--color-muted); margin-bottom: 1.5rem;">Pull latest changes from GitHub repository.</p>
+          <form method="POST" action="{{ url_for('admin_update') }}">
+            <button type="submit" class="btn btn-ghost" style="width: 100%;">Check for Updates</button>
+          </form>
+        </div>
+
+        <div class="card" style="background: rgba(255,255,255,0.02);">
+          <h4 style="font-weight: 800; margin-bottom: 1rem; color: var(--color-danger);">Reset System</h4>
+          <p style="font-size: 0.85rem; color: var(--color-muted); margin-bottom: 1.5rem;">Wipe all data and restart setup wizard.</p>
+          <form method="POST" action="{{ url_for('admin_reset') }}" data-confirm="CRITICAL: This will delete EVERYTHING. Are you absolutely sure?">
+            <button type="submit" class="btn btn-danger" style="width: 100%;">Hard Reset</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div id="add-user-modal" class="base-modal-overlay hidden">
+  <div class="base-modal-box">
+    <div class="base-modal-header">
+      <h2>Add Family Member</h2>
+      <button class="base-modal-close" onclick="this.closest('.base-modal-overlay').classList.add('hidden')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin_add_user') }}">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" required placeholder="e.g. Sarah">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" required placeholder="••••••••">
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select name="role">
+          <option value="user">Family Member</option>
+          <option value="admin">System Admin</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Shopping Permission</label>
+        <select name="shopping_permission">
+          <option value="full">Full Access (Add & Delete)</option>
+          <option value="add">Add Only (Cannot delete others)</option>
+          <option value="read">Read Only</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Create Account</button>
+    </form>
+  </div>
+</div>
+
+<div id="reset-pwd-modal" class="base-modal-overlay hidden">
+  <div class="base-modal-box">
+    <div class="base-modal-header">
+      <h2>Reset Password</h2>
+      <button class="base-modal-close" onclick="this.closest('.base-modal-overlay').classList.add('hidden')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin_reset_password') }}">
+      <input type="hidden" name="username" id="reset-username">
+      <p style="margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--color-muted);">Setting new password for <strong id="reset-user-display" style="color: var(--color-text);"></strong></p>
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" name="new_password" required placeholder="••••••••">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Update Password</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function showTab(tabId, btn) {
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.add('hidden'));
+    document.getElementById('tab-' + tabId).classList.remove('hidden');
+    
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function openResetModal(username) {
+    document.getElementById('reset-username').value = username;
+    document.getElementById('reset-user-display').textContent = username;
+    document.getElementById('reset-pwd-modal').classList.remove('hidden');
+  }
+</script>
+{% endblock %}

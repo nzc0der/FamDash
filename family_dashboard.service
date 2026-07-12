@@ -1,0 +1,64 @@
+[Unit]
+Description=Family Dashboard Flask Server
+Documentation=https://github.com/nzc0der/FamilySystem
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# ---------------------------------------------------------------
+# Identity
+# ---------------------------------------------------------------
+# Run as the pi user. Change this if your Raspberry Pi user is
+# named differently (e.g. "ubuntu").
+User=pi
+Group=pi
+
+# ---------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------
+# Adjust WorkingDirectory and ExecStart to match where you cloned
+# the repository. The venv path must match what you created.
+WorkingDirectory=/home/pi/FamilySystem
+ExecStart=/home/pi/FamilySystem/venv/bin/python /home/pi/FamilySystem/server.py
+
+# ---------------------------------------------------------------
+# Restart policy
+# ---------------------------------------------------------------
+# Restart on any non-zero exit. This covers:
+#   - Deliberate SIGTERM sent after a successful git pull
+#     (systemd restarts, server loads new code).
+#   - Unexpected crashes.
+# A short RestartSec ensures the restart is near-instant.
+Restart=always
+RestartSec=3
+StartLimitInterval=120
+StartLimitBurst=5
+
+# ---------------------------------------------------------------
+# Environment
+# ---------------------------------------------------------------
+# Force Python to write output immediately (no buffering), so that
+# logs appear in journald in real time.
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+# ---------------------------------------------------------------
+# Output capture
+# ---------------------------------------------------------------
+# Route stdout/stderr into the systemd journal so that
+#   journalctl -u family_dashboard -f
+# shows live application logs.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=family_dashboard
+
+# ---------------------------------------------------------------
+# Security hardening (safe for Raspberry Pi OS / Debian)
+# ---------------------------------------------------------------
+# Prevent the service from acquiring new privileges.
+NoNewPrivileges=true
+# Give the process its own /tmp namespace.
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
