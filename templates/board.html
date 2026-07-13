@@ -100,7 +100,7 @@
     </div>
 
     {% for ann in announcements %}
-    <div class="card ann-card glass-panel {% if ann.pinned %}pinned{% endif %}">
+    <div id="announcement-{{ ann.id }}" class="card ann-card glass-panel {% if ann.pinned %}pinned{% endif %}">
       {% if ann.pinned %}
       <div class="pinned-label">
         <span>📌</span> Pinned

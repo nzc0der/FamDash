@@ -340,8 +340,6 @@ def _register_routes(app: Flask) -> None:
             if pinned and session.get("role") != "admin":
                 pinned = False
             announcement_id = settings.add_announcement(session["user_id"], title, body, pinned)
-            flash("Announcement posted successfully.", "success")
-            # Send push in a background thread so the HTTP response is not delayed.
             push_service.send_announcement_push(announcement_id)
         return redirect(url_for("board"))
 
@@ -362,35 +360,7 @@ def _register_routes(app: Flask) -> None:
         if not endpoint or not p256dh or not auth:
             return jsonify({"error": "Missing required push subscription fields."}), 400
 
-        sub_id = settings.save_push_subscription(session["user_id"], endpoint, p256dh, auth)
-        logger.info(
-            "Push subscription saved (id=%s) for user %s.",
-            sub_id,
-            session.get("username"),
-        )
-        return jsonify({"status": "ok", "id": sub_id})
-
-    @app.route("/api/notifications/unsubscribe", methods=["POST"])
-    @login_required
-    def notification_unsubscribe():
-        """Remove a push subscription by endpoint URL."""
-        payload = request.get_json(silent=True) or {}
-        endpoint = (payload.get("endpoint") or "").strip()
-        if not endpoint:
-            return jsonify({"error": "endpoint is required"}), 400
-        # Look up the subscription by endpoint.
-        with settings._get_db() as conn:
-            row = conn.execute(
-                "SELECT id FROM push_subscriptions WHERE endpoint = ? AND user_id = ?",
-                (endpoint, session["user_id"]),
-            ).fetchone()
-        if row:
-            settings.delete_push_subscription(row["id"])
-            logger.info(
-                "Push subscription %s removed for user %s.",
-                row["id"],
-                session.get("username"),
-            )
+        settings.save_push_subscription(session["user_id"], endpoint, p256dh, auth)
         return jsonify({"status": "ok"})
 
     @app.route("/board/delete/<int:ann_id>", methods=["POST"])
@@ -686,21 +656,10 @@ def _register_routes(app: Flask) -> None:
     
     @app.route("/sw.js")
     def service_worker():
-        """Serve the service worker from the root scope with no-cache headers.
-
-        Service workers must be served from the root of the origin to control
-        the entire site.  The no-cache headers ensure the browser always
-        fetches the latest version.
-        """
-        response = send_from_directory(
-            os.path.join(PROJECT_ROOT, "static"),
-            "sw.js",
-            mimetype="application/javascript",
-        )
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response.headers["Pragma"] = "no-cache"
-        response.headers["Expires"] = "0"
-        return response
+        return send_from_directory(
+        PROJECT_ROOT,
+        "static/sw.js"
+    )
 
     # ------------------------------------------------------------------
     # Health check endpoint (used by monitoring / systemd watchdog)

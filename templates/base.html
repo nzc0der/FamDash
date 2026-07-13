@@ -10,7 +10,7 @@
 
   <!-- PWA -->
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-  <meta name="theme-color" content="#4285f4">
+  <meta name="theme-color" content="#19191c">
 
   <!-- Apple PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -406,7 +406,7 @@
 
     @media (max-width: 640px) {
       .page-wrapper {
-        padding: 1.5rem 1rem;
+        padding: 1.25rem 0.75rem;
       }
 
       .nav-brand span:not(.brand-icon) {
@@ -419,6 +419,12 @@
 
       .nav-user {
         padding-right: 0.4rem;
+      }
+
+      .base-modal-box {
+        padding: 1.5rem 1.25rem;
+        width: 95%;
+        border-radius: var(--radius);
       }
     }
 
@@ -722,6 +728,12 @@
     </div>
 
     <div class="nav-right">
+      {% if session.role != 'guest' %}
+      <button id="enable-notifications-btn" class="btn btn-ghost" type="button"
+        style="display: none; padding: 0.6rem 1rem; border-radius: 999px; font-size: 0.8rem; margin-right: 0.75rem;">
+        Enable Notifications
+      </button>
+      {% endif %}
       <div class="dropdown desktop-only" id="user-dropdown">
         <div class="nav-user" style="cursor: pointer;" onclick="toggleDropdown()">
           <div class="avatar">{{ session.username[0]|upper }}</div>
@@ -992,6 +1004,126 @@
   </script>
   {% block extra_scripts %}{% endblock %}
   <script>
+(function () {
+  const isStandalonePwa = function () {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+      ('standalone' in window.navigator && window.navigator.standalone === true);
+  };
+
+  const isPushSupported = function () {
+    return window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  };
+
+  const urlBase64ToUint8Array = function (base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
+    return Uint8Array.from(raw, char => char.charCodeAt(0));
+  };
+
+  const notifyUser = function (message) {
+    if (window.customConfirm) {
+      window.customConfirm(message, null, true);
+    } else {
+      alert(message);
+    }
+  };
+
+  const enableButton = document.getElementById('enable-notifications-btn');
+
+  async function updateNotificationButtonState() {
+    if (!enableButton) return;
+
+    if (!isPushSupported()) {
+      enableButton.style.display = 'none';
+      return;
+    }
+
+    const standalone = isStandalonePwa();
+    // We allow normal browser testing without requiring PWA standalone mode
+    if (Notification.permission === 'granted') {
+      enableButton.textContent = 'Notifications Enabled';
+      enableButton.style.display = 'inline-flex';
+      enableButton.disabled = true;
+    } else if (Notification.permission === 'denied') {
+      enableButton.textContent = 'Notifications Blocked';
+      enableButton.style.display = 'inline-flex';
+      enableButton.disabled = true;
+    } else {
+      enableButton.textContent = 'Enable Notifications';
+      enableButton.style.display = 'inline-flex';
+      enableButton.disabled = false;
+    }
+  }
+ 
+  async function subscribeUserToPush() {
+    if (!enableButton) return;
+ 
+    if (!isPushSupported()) {
+      notifyUser('Web Push is not supported by your browser or requires HTTPS.');
+      return;
+    }
+ 
+    if (!('Notification' in window)) {
+      notifyUser('This browser does not support the Web Notification API.');
+      return;
+    }
+ 
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      notifyUser('Notification permission was not granted.');
+      updateNotificationButtonState();
+      return;
+    }
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const vKeyResponse = await fetch('/api/notifications/vapid-public-key', { credentials: 'same-origin' });
+      if (!vKeyResponse.ok) {
+        throw new Error('Unable to load VAPID public key.');
+      }
+      const { publicKey } = await vKeyResponse.json();
+
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      });
+
+      const subscriptionJson = subscription.toJSON();
+      const response = await fetch('/api/notifications/subscribe', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endpoint: subscriptionJson.endpoint,
+          keys: {
+            p256dh: subscriptionJson.keys.p256dh,
+            auth: subscriptionJson.keys.auth
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || 'Subscription save failed.');
+      }
+
+      enableButton.textContent = 'Notifications Enabled';
+      enableButton.disabled = true;
+    } catch (error) {
+      console.error('Push subscription failed:', error);
+      notifyUser('Unable to enable push notifications right now.');
+      updateNotificationButtonState();
+    }
+  }
+
+  if (enableButton) {
+    enableButton.addEventListener('click', subscribeUserToPush);
+  }
+
+  window.addEventListener('load', updateNotificationButtonState);
+})();
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
