@@ -163,7 +163,7 @@ On any device connected to the **same local Wi-Fi network** as the Pi:
 
 2. Open a browser and navigate to:
    ```
-   http://192.168.1.42:8000
+   http://192.168.1.42:80
    ```
    Replace `192.168.1.42` with your Pi's actual address.
 
