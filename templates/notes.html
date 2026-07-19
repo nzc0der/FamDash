@@ -4,12 +4,14 @@
 
 {% block extra_head %}
 <style>
+  /* --- Layout & Grid --- */
   .notes-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.5rem;
+    gap: 1.75rem;
   }
 
+  /* --- Note Cards --- */
   .note-card {
     height: 280px;
     display: flex;
@@ -20,15 +22,14 @@
     padding: 1.75rem;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    transition: all var(--transition);
+    border-radius: var(--radius, 16px);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   }
 
-  /* Premium Hover Style (No scuffed rotation) */
-  .note-card:hover {
-    transform: translateY(-6px);
+  .note-card:hover, .note-card:focus-within {
+    transform: translateY(-4px);
     border-color: var(--color-primary);
-    box-shadow: 0 20px 40px rgba(167, 139, 250, 0.15), var(--shadow);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(167, 139, 250, 0.15);
   }
 
   .note-card::after {
@@ -36,17 +37,18 @@
     position: absolute;
     bottom: 0;
     right: 0;
-    width: 32px;
-    height: 32px;
-    background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.03) 50%);
-    border-radius: 4px 0 0 0;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.05) 50%);
+    border-radius: 8px 0 0 0;
   }
 
   .note-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
+    gap: 1rem;
   }
 
   .note-title {
@@ -55,51 +57,96 @@
     color: var(--color-text);
     letter-spacing: -0.02em;
     line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .note-excerpt {
     font-size: 0.95rem;
     color: var(--color-muted);
-    line-height: 1.7;
+    line-height: 1.6;
     flex: 1;
     overflow: hidden;
     display: -webkit-box;
-    -webkit-line-clamp: 5;
-    line-clamp: 5;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
   }
 
   .note-footer {
-    margin-top: 1rem;
+    margin-top: 1.25rem;
     padding-top: 1rem;
     border-top: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.7rem;
-    font-weight: 800;
+    font-size: 0.75rem;
+    font-weight: 700;
     color: var(--color-muted);
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
+  }
+
+  .author-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .avatar-mini {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 800;
+  }
+
+  /* --- Top Section & Search --- */
+  .header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+
+  .title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.75rem;
+    font-weight: 800;
+  }
+
+  .btn-new-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 48px;
+    padding: 0 1.5rem;
+    border-radius: 12px;
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+
+  .btn-new-note:hover {
+    transform: scale(1.02);
   }
 
   .search-container {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
     margin-bottom: 2.5rem;
-    max-width: 100%;
-  }
-
-  .search-input {
-    width: 100%;
-    height: 60px;
-    background: var(--color-surface) !important;
-    border: 2px solid var(--color-border) !important;
-    border-radius: 18px !important;
-    padding: 0 1.5rem 0 3.5rem !important;
-    font-size: 1rem !important;
-    font-weight: 600 !important;
   }
 
   .search-wrapper {
+    flex: 1;
     position: relative;
   }
 
@@ -110,148 +157,188 @@
     transform: translateY(-50%);
     color: var(--color-muted);
     font-size: 1.2rem;
+    pointer-events: none;
   }
 
-  /* Custom Note border colors based on index */
-  .note-card.color-0 { border-top: 4px solid var(--color-primary); }
-  .note-card.color-1 { border-top: 4px solid var(--color-accent); }
-  .note-card.color-2 { border-top: 4px solid var(--color-success); }
-  .note-card.color-3 { border-top: 4px solid var(--color-warning); }
-  .note-card.color-4 { border-top: 4px solid var(--color-info); }
+  .search-input {
+    width: 100%;
+    height: 56px;
+    background: var(--color-surface) !important;
+    border: 2px solid var(--color-border) !important;
+    border-radius: 16px !important;
+    padding: 0 1.5rem 0 3.5rem !important;
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
 
-  /* Spacious Note Modal layout */
+  .search-input:focus {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.15) !important;
+    outline: none;
+  }
+
+  .stats-badge {
+    padding: 0 1.5rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    font-weight: 800;
+    color: var(--color-primary);
+    border-radius: 16px;
+    border: 1px solid var(--color-border);
+  }
+
+  /* --- Note Border Colors --- */
+  .color-0 { border-top: 4px solid var(--color-primary); }
+  .color-1 { border-top: 4px solid var(--color-accent); }
+  .color-2 { border-top: 4px solid var(--color-success); }
+  .color-3 { border-top: 4px solid var(--color-warning); }
+  .color-4 { border-top: 4px solid var(--color-info); }
+
+  /* --- Modals & Inputs --- */
   .note-modal-box {
-    max-width: 680px !important;
-    width: 92% !important;
+    max-width: 720px !important;
+    width: 95% !important;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
   }
 
-  /* Premium Editor Input Styles */
+  .modal-scroll-area {
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+
+  /* Custom Scrollbar for Modal */
+  .modal-scroll-area::-webkit-scrollbar { width: 8px; }
+  .modal-scroll-area::-webkit-scrollbar-track { background: transparent; }
+  .modal-scroll-area::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
+  .modal-scroll-area::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
+
+  .editor-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    border-radius: 12px;
+    margin-top: 0.5rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .editor-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15);
+  }
+
   #note-title-input {
     font-size: 1.25rem;
     font-weight: 800;
-    padding: 1rem;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.02);
-    border: 1px solid var(--color-border);
-    color: #fff;
-    width: 100%;
-    margin-top: 0.5rem;
+    padding: 1rem 1.25rem;
   }
 
   #note-editor {
-    min-height: 320px;
+    min-height: 350px;
     font-family: inherit;
     font-size: 1rem;
     line-height: 1.7;
     padding: 1.25rem;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.02);
-    border: 1px solid var(--color-border);
-    color: #fff;
     resize: vertical;
-    width: 100%;
-    margin-top: 0.5rem;
   }
 
-  /* Rendered Markdown Styling */
+  .char-count {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-muted);
+  }
+
+  /* --- Rendered Markdown Typography --- */
   .rendered-markdown {
     line-height: 1.8;
     font-size: 1.05rem;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--color-text);
   }
-
-  .rendered-markdown p {
-    margin-bottom: 1.25rem;
-  }
-
-  .rendered-markdown h1, 
-  .rendered-markdown h2, 
-  .rendered-markdown h3 {
-    margin-top: 1.5rem;
+  .rendered-markdown p { margin-bottom: 1.25rem; }
+  .rendered-markdown h1, .rendered-markdown h2, .rendered-markdown h3 {
+    margin-top: 2rem;
     margin-bottom: 1rem;
     font-weight: 800;
-    color: #fff;
+    color: var(--color-text);
+    line-height: 1.3;
   }
-
-  .rendered-markdown ul, 
-  .rendered-markdown ol {
-    margin-left: 1.5rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .rendered-markdown li {
-    margin-bottom: 0.5rem;
-  }
-
+  .rendered-markdown h1 { font-size: 2rem; border-bottom: 1px solid var(--color-border); padding-bottom: 0.5rem; }
+  .rendered-markdown h2 { font-size: 1.5rem; }
+  .rendered-markdown ul, .rendered-markdown ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+  .rendered-markdown li { margin-bottom: 0.5rem; }
   .rendered-markdown code {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(167, 139, 250, 0.1);
+    color: var(--color-primary);
     padding: 0.2rem 0.4rem;
     border-radius: 6px;
     font-family: monospace;
-    font-size: 0.9rem;
+    font-size: 0.9em;
   }
-
   .rendered-markdown pre {
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.4);
     padding: 1.25rem;
     border-radius: 12px;
     border: 1px solid var(--color-border);
     overflow-x: auto;
     margin-bottom: 1.25rem;
   }
-
   .rendered-markdown pre code {
     background: transparent;
+    color: var(--color-text);
     padding: 0;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
   }
-
   .rendered-markdown blockquote {
     border-left: 4px solid var(--color-primary);
-    padding-left: 1.25rem;
-    margin-left: 0;
-    margin-bottom: 1.25rem;
+    padding: 0.5rem 0 0.5rem 1.25rem;
+    margin: 0 0 1.5rem 0;
     color: var(--color-muted);
     font-style: italic;
+    background: linear-gradient(90deg, rgba(167, 139, 250, 0.05) 0%, transparent 100%);
+    border-radius: 0 8px 8px 0;
+  }
+
+  /* --- Empty State --- */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    border-radius: var(--radius, 16px);
+    border: 1px dashed var(--color-border);
+    background: rgba(255,255,255,0.02);
   }
 
   @media (max-width: 640px) {
-    .search-container {
-      flex-direction: column;
-      align-items: stretch !important;
-      gap: 0.75rem !important;
-    }
-    .stats-badge {
-      width: 100%;
-      justify-content: center;
-      height: 52px !important;
-    }
-    .search-input {
-      height: 52px !important;
-    }
+    .search-container { flex-direction: column; align-items: stretch; }
+    .stats-badge { justify-content: center; }
+    .header-actions { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .btn-new-note { width: 100%; justify-content: center; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="section-header" style="margin-bottom: 1.5rem;">
-  <div class="section-title">
-    <span>📝</span>
-    Family Notes
+<div class="header-actions">
+  <div class="title-wrapper">
+    <span>📝</span> Family Notes
   </div>
   {% if session.role != 'guest' %}
-  <button class="btn btn-primary" onclick="openNoteModal()" style="height: 52px; padding: 0 1.5rem; border-radius: 14px;">
-    <span style="font-size: 1.2rem; margin-right: 0.5rem;">+</span> New Note
+  <button class="btn btn-primary btn-new-note" onclick="openNoteModal()">
+    <span style="font-size: 1.2rem;">+</span> New Note
   </button>
   {% endif %}
 </div>
 
-<div class="search-container" style="display: flex; gap: 1rem; align-items: center;">
-  <div class="search-wrapper" style="flex: 1;">
+<div class="search-container">
+  <div class="search-wrapper">
     <span class="search-icon">🔍</span>
     <input type="text" id="notes-search" class="search-input" placeholder="Search notes by title or content..." onkeyup="filterNotes()">
   </div>
-  <div class="stats-badge glass-panel" style="padding: 0 1.5rem; height: 60px; display: flex; align-items: center; font-weight: 800; color: var(--color-primary); border-radius: 18px;">
+  <div class="stats-badge glass-panel">
     <span id="note-count">{{ notes|length }}</span>&nbsp;Notes
   </div>
 </div>
@@ -263,22 +350,24 @@
        data-title="{{ note.title|lower|forceescape }}"
        data-content="{{ note.content|lower|forceescape }}"
        onclick="viewNote(JSON.parse(this.dataset.note))">
+    
     <div class="note-header">
       <div class="note-title">{{ note.title }}</div>
       {% if session.role != 'guest' %}
-      <div style="display: flex; gap: 0.5rem;">
-        <button class="btn btn-ghost" 
-                style="padding: 0.4rem; border-radius: 8px; width: 32px; height: 32px;" 
-                onclick="event.stopPropagation(); editNote(JSON.parse(this.closest('.note-card').dataset.note))">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-        </button>
-      </div>
+      <button class="btn btn-ghost" 
+              style="padding: 0.4rem; border-radius: 8px; min-width: 32px; height: 32px;" 
+              aria-label="Edit note"
+              onclick="event.stopPropagation(); editNote(JSON.parse(this.closest('.note-card').dataset.note))">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+      </button>
       {% endif %}
     </div>
+    
     <div class="note-excerpt">{{ note.content }}</div>
+    
     <div class="note-footer">
-      <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <div class="avatar" style="width: 20px; height: 20px; font-size: 0.6rem;">{{ note.author[0]|upper }}</div>
+      <div class="author-info">
+        <div class="avatar-mini">{{ note.author[0]|upper }}</div>
         <span>{{ note.author|capitalize }}</span>
       </div>
       <span>{{ note.created_at[:10] }}</span>
@@ -288,52 +377,58 @@
 </div>
 
 {% if not notes %}
-<div class="empty-state glass-panel">
-  <div style="font-size: 3rem; margin-bottom: 1rem;">📝</div>
-  <h2 style="font-weight: 800; margin-bottom: 0.5rem;">No notes yet</h2>
+<div class="empty-state">
+  <div style="font-size: 3.5rem; margin-bottom: 1rem; opacity: 0.8;">📝</div>
+  <h2 style="font-weight: 800; margin-bottom: 0.5rem; color: var(--color-text);">No notes yet</h2>
   <p style="color: var(--color-muted);">Start sharing thoughts, recipes, or family plans.</p>
 </div>
 {% endif %}
 
-<!-- Note Modal (View/Edit) -->
 <div id="note-modal" class="base-modal-overlay hidden">
   <div class="base-modal-box note-modal-box">
-    <div class="base-modal-header" style="margin-bottom: 1.5rem;">
+    
+    <div class="base-modal-header" style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--color-border);">
       <h2 id="modal-title" style="font-weight: 900; letter-spacing: -0.02em;">New Note</h2>
-      <button class="base-modal-close" onclick="closeNoteModal()">&times;</button>
+      <button class="base-modal-close" aria-label="Close modal" onclick="closeNoteModal()">&times;</button>
     </div>
 
-    <form id="note-form" method="POST" action="{{ url_for('note_save') }}">
-      <input type="hidden" name="note_id" id="note-id">
-      <div class="form-group">
-        <label>Title</label>
-        <input type="text" name="title" id="note-title-input" required placeholder="A catchy title...">
-      </div>
-      <div class="form-group">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
-          <label style="margin-bottom: 0;">Content (Markdown supported)</label>
-          <span id="char-count" style="font-size: 0.75rem; font-weight: 800; color: var(--color-muted);">0 / 5000</span>
+    <div class="modal-scroll-area">
+      <form id="note-form" method="POST" action="{{ url_for('note_save') }}">
+        <input type="hidden" name="note_id" id="note-id">
+        
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <label style="font-weight: 700;">Title</label>
+          <input type="text" name="title" id="note-title-input" class="editor-input" required placeholder="A catchy title...">
         </div>
-        <textarea name="content" id="note-editor" required placeholder="Write your heart out..." maxlength="5000" oninput="updateCharCount(this)"></textarea>
-      </div>
-      
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
-        {% if session.role != 'guest' %}
-        <button type="button" id="delete-note-btn" class="btn btn-ghost" style="color: var(--color-danger); border-color: rgba(248,113,113,0.2);" onclick="confirmDeleteNote()">Delete Note</button>
-        <button type="submit" class="btn btn-primary">Save Changes</button>
-        {% endif %}
-      </div>
-    </form>
+        
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+            <label style="font-weight: 700; margin-bottom: 0;">Content (Markdown supported)</label>
+            <span id="char-count" class="char-count">0 / 5000</span>
+          </div>
+          <textarea name="content" id="note-editor" class="editor-input" required placeholder="Write your heart out..." maxlength="5000" oninput="updateCharCount(this)"></textarea>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; padding-bottom: 1rem;">
+          {% if session.role != 'guest' %}
+          <button type="button" id="delete-note-btn" class="btn btn-ghost" style="color: var(--color-danger); border: 1px solid rgba(248,113,113,0.2);" onclick="confirmDeleteNote()">Delete Note</button>
+          <button type="submit" class="btn btn-primary" style="padding: 0 2rem;">Save Changes</button>
+          {% endif %}
+        </div>
+      </form>
 
-    <div id="note-view-content" class="hidden">
-      <div id="note-rendered" class="rendered-markdown"></div>
-      <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--color-border);">
-        {% if session.role != 'guest' %}
-        <button type="button" id="quick-edit-btn" class="btn btn-primary" onclick="triggerEditFromView()">Edit Note</button>
-        {% endif %}
-        <button type="button" class="btn btn-ghost" onclick="closeNoteModal()">Close</button>
+      <div id="note-view-content" class="hidden">
+        <div id="note-rendered" class="rendered-markdown"></div>
+        
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2.5rem; padding: 1.5rem 0 1rem 0; border-top: 1px solid var(--color-border);">
+          <button type="button" class="btn btn-ghost" onclick="closeNoteModal()">Close</button>
+          {% if session.role != 'guest' %}
+          <button type="button" id="quick-edit-btn" class="btn btn-primary" onclick="triggerEditFromView()">Edit Note</button>
+          {% endif %}
+        </div>
       </div>
     </div>
+
   </div>
 </div>
 

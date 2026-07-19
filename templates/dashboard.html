@@ -4,17 +4,66 @@
 
 {% block extra_head %}
 <style>
+  /* --- Core Variables & Animations --- */
+  :root {
+    --glass-bg: rgba(255, 255, 255, 0.04);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-hover: rgba(255, 255, 255, 0.08);
+    --shadow-soft: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    --blur-intensity: 12px;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% { filter: drop-shadow(0 0 15px rgba(var(--color-primary-rgb), 0.4)); }
+    50% { filter: drop-shadow(0 0 25px rgba(var(--color-primary-rgb), 0.8)); }
+  }
+
+  /* --- Premium Glass Panel --- */
+  .glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur-intensity));
+    -webkit-backdrop-filter: blur(var(--blur-intensity));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-soft);
+    border-radius: var(--radius-md, 16px);
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0; /* Starting state for animation */
+  }
+
+  /* Staggered animation delays */
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+  .delay-4 { animation-delay: 0.4s; }
+
+  /* --- Greeting Section --- */
   .greeting-container {
-    margin-bottom: 3rem;
+    margin-bottom: 3.5rem;
     position: relative;
+    animation: fadeInUp 0.6s ease forwards;
   }
 
   .greeting {
-    font-size: 3.5rem;
+    font-size: clamp(2.5rem, 5vw, 4rem);
     font-weight: 900;
     letter-spacing: -0.04em;
     margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, #fff 30%, var(--color-primary) 100%);
+    background: linear-gradient(135deg, #ffffff 20%, var(--color-primary) 100%);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -22,7 +71,7 @@
   }
 
   .date-display {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     color: var(--color-muted);
     font-weight: 600;
     display: flex;
@@ -32,17 +81,18 @@
 
   .date-display::before {
     content: '';
-    width: 20px;
-    height: 3px;
+    width: 24px;
+    height: 4px;
     background: var(--color-primary);
     border-radius: 10px;
   }
 
+  /* --- Section Headers --- */
   .section-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.75rem;
   }
 
   .section-title {
@@ -51,38 +101,44 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    letter-spacing: -0.02em;
   }
 
+  /* --- To-Do List --- */
   .todo-item {
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--color-border);
+    padding: 1.25rem;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
     margin-bottom: 0.75rem;
-    transition: all var(--transition);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .todo-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
-    transform: translateX(5px);
+    background: var(--glass-hover);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateX(6px);
+    box-shadow: -4px 4px 15px rgba(0,0,0,0.1);
   }
 
   .todo-item.done {
-    opacity: 0.5;
+    opacity: 0.4;
+    transform: none;
+    box-shadow: none;
   }
 
   .todo-item.done .todo-text {
     text-decoration: line-through;
-    color: var(--color-muted);
+    text-decoration-color: var(--color-primary);
+    text-decoration-thickness: 2px;
   }
 
   .todo-check {
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     border-radius: 8px;
     border: 2px solid var(--color-border);
     display: flex;
@@ -91,7 +147,12 @@
     cursor: pointer;
     background: none;
     color: #fff;
-    transition: all var(--transition);
+    transition: all 0.2s ease;
+  }
+
+  .todo-check:focus-visible, .btn-ghost:focus-visible, input:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
 
   .todo-item.done .todo-check {
@@ -99,9 +160,9 @@
     border-color: var(--color-success);
   }
 
+  /* --- Weather Widget --- */
   .weather-card {
     background: linear-gradient(135deg, #1e1e2d 0%, #111119 100%);
-    border: 1px solid rgba(255, 255, 255, 0.05);
     position: relative;
     overflow: hidden;
   }
@@ -109,422 +170,425 @@
   .weather-card::before {
     content: '';
     position: absolute;
-    top: -20%;
-    right: -10%;
-    width: 150px;
-    height: 150px;
+    top: -30%;
+    right: -20%;
+    width: 200px;
+    height: 200px;
     background: var(--color-primary);
-    filter: blur(80px);
-    opacity: 0.15;
+    filter: blur(90px);
+    opacity: 0.2;
+    animation: pulseGlow 6s infinite alternate;
   }
 
   .weather-main {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
   }
 
   .weather-temp-big {
-    font-size: 3.5rem;
-    font-weight: 800;
+    font-size: 4rem;
+    font-weight: 900;
     line-height: 1;
+    letter-spacing: -0.05em;
   }
 
   .weather-icon-big {
-    font-size: 4rem;
-    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.2));
+    font-size: 4.5rem;
+    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.3));
   }
 
-  .weather-details {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    font-size: 0.85rem;
-    color: var(--color-muted);
-    border-top: 1px solid var(--color-border);
-    padding-top: 1.25rem;
-  }
-
-  .quick-links {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-    gap: 1rem;
-  }
-
+  /* --- Quick Links & Announcements --- */
   .link-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
     text-align: center;
-    padding: 1rem 0.5rem;
-    background: rgba(255, 255, 255, 0.03);
+    padding: 1.25rem 0.5rem;
+    background: var(--glass-bg);
     border-radius: var(--radius-sm);
-    border: 1px solid var(--color-border);
-    transition: all var(--transition);
+    border: 1px solid var(--glass-border);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    text-decoration: none;
   }
 
   .link-item:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--glass-hover);
     border-color: var(--color-primary);
-    transform: translateY(-4px);
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
   }
 
-  .link-icon {
-    font-size: 1.5rem;
+  .ann-item {
+    padding: 1.5rem;
+    background: var(--glass-bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    transition: all 0.3s ease;
+    cursor: pointer;
   }
 
-  .link-label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--color-muted);
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
+  .ann-item:hover {
+    background: var(--glass-hover);
+    border-color: rgba(255, 255, 255, 0.15);
   }
 
   .ann-item.is-pinned {
     border-left: 4px solid var(--color-accent);
-    background: rgba(244, 114, 182, 0.03);
+    background: linear-gradient(90deg, rgba(var(--color-accent-rgb), 0.05), transparent);
   }
 
-  @media (max-width: 768px) {
-    .greeting {
-      font-size: 2.5rem;
-    }
+  .timeline-item {
+    padding: 1.25rem;
+    background: var(--glass-bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    border-left: 4px solid var(--color-primary);
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
 
-    .greeting-container {
-      margin-bottom: 2rem;
-    }
+  .timeline-item:hover {
+    transform: translateX(5px);
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="greeting-container">
-  <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+<header class="greeting-container">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1.5rem;">
     <div>
       <h1 class="greeting" id="greeting-text">Hello, {{ session.username }}.</h1>
-      <div class="date-display" id="date-display"></div>
+      <div class="date-display" id="date-display">Loading date...</div>
     </div>
 
-    <!-- Yearly Progress -->
-    <div class="year-card glass-panel" style="padding: 1rem 1.5rem; min-width: 240px;">
-      <div
-        style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 800; color: var(--color-muted); text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+    <div class="year-card glass-panel delay-1" style="padding: 1.25rem 1.75rem; min-width: 260px;">
+      <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 800; color: var(--color-muted); text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 0.05em;">
         <span>Year Progress</span>
         <span id="year-pct">0%</span>
       </div>
-      <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
-        <div id="year-bar"
-          style="height: 100%; background: linear-gradient(90deg, var(--color-accent), var(--color-primary)); width: 0%; transition: width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);">
-        </div>
+      <div style="height: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+        <div id="year-bar" style="height: 100%; background: linear-gradient(90deg, var(--color-accent), var(--color-primary)); width: 0%; transition: width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1); border-radius: 4px;"></div>
       </div>
-      <div style="font-size: 0.8rem; font-weight: 700; margin-top: 0.5rem; color: var(--color-text);" id="year-display">
-        2024</div>
+      <div style="font-size: 0.85rem; font-weight: 700; margin-top: 0.75rem; color: var(--color-text);" id="year-display"></div>
     </div>
   </div>
-</div>
+</header>
 
 <div class="grid grid-2">
-  <!-- To-Dos -->
-  <div class="card todo-card glass-panel">
-    <div class="section-header">
-      <div class="section-title">
-        <span>✅</span>
-        Daily Tasks
-      </div>
-      <span class="badge"
-        style="background: rgba(167, 139, 250, 0.1); color: var(--color-primary); padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 800;">{{
-        todos|length }} Items</span>
-    </div>
+  <section class="card todo-card glass-panel delay-2">
+    <header class="section-header">
+      <h2 class="section-title">
+        <span aria-hidden="true">✅</span> Daily Tasks
+      </h2>
+      <span class="badge" style="background: rgba(var(--color-primary-rgb), 0.15); color: var(--color-primary); padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 800;">
+        {{ todos|length }} Items
+      </span>
+    </header>
 
     {% if session.role != 'guest' %}
-    <div class="progress-section"
-      style="margin-bottom: 2rem; background: rgba(255,255,255,0.02); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
+    <div class="progress-section" style="margin-bottom: 2rem; background: rgba(0,0,0,0.15); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--glass-border);">
       {% set done_count = todos | selectattr('done', 'equalto', 1) | list | length %}
       {% set total = todos | length %}
       {% set pct = ((done_count / total * 100) | int) if total > 0 else 0 %}
-      <div class="progress-info"
-        style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-size: 0.85rem; font-weight: 800;">
+      <div class="progress-info" style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-size: 0.85rem; font-weight: 800;">
         <span>Task Completion</span>
         <span style="color: var(--color-primary);">{{ pct }}%</span>
       </div>
-      <div class="progress-track"
-        style="height: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; overflow: hidden;">
-        <div class="progress-fill"
-          style="height: 100%; background: linear-gradient(90deg, var(--color-primary), var(--color-accent)); width: 0%; transition: width 1s ease-out;"
-          data-pct="{{ pct }}"></div>
+      <div class="progress-track" style="height: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; overflow: hidden;">
+        <div class="progress-fill" style="height: 100%; background: linear-gradient(90deg, var(--color-primary), var(--color-accent)); width: 0%; transition: width 1s ease-out;" data-pct="{{ pct }}"></div>
       </div>
     </div>
 
-    <form id="todo-add-form" method="POST" action="{{ url_for('todo_add') }}"
-      style="display: flex; gap: 0.5rem; margin-bottom: 2rem;">
-      <input id="todo-input" type="text" name="content" placeholder="Add a new task..." maxlength="300" required
-        style="flex: 1; height: 54px;">
-      <button type="submit" class="btn btn-primary"
-        style="padding: 0 1.5rem; height: 54px; border-radius: 16px;">Add</button>
+    <form id="todo-add-form" method="POST" action="{{ url_for('todo_add') }}" style="display: flex; gap: 0.75rem; margin-bottom: 2rem;">
+      <input id="todo-input" type="text" name="content" placeholder="What needs to be done?" maxlength="300" required style="flex: 1; height: 54px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 0 1rem; color: #fff; transition: all 0.3s;">
+      <button type="submit" class="btn btn-primary" style="padding: 0 1.75rem; height: 54px; border-radius: 12px; font-weight: 700; transition: transform 0.2s;">Add</button>
     </form>
     {% endif %}
 
-    <div class="todo-list" id="todo-list">
+    <div class="todo-list" id="todo-list" role="list">
       {% for todo in todos %}
-      <div class="todo-item {% if todo.done %}done{% endif %}">
+      <article class="todo-item {% if todo.done %}done{% endif %}" role="listitem">
         <form method="POST" action="{{ url_for('todo_toggle', todo_id=todo.id) }}">
-          <button type="submit" class="todo-check">
+          <button type="submit" class="todo-check" aria-label="{% if todo.done %}Mark incomplete{% else %}Mark complete{% endif %}">
             {% if todo.done %}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"
-              stroke-linecap="round" stroke-linejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
             {% endif %}
           </button>
         </form>
-        <span class="todo-text" style="flex: 1; font-weight: 600;">{{ todo.content }}</span>
+        <span class="todo-text" style="flex: 1; font-weight: 600; font-size: 1.05rem;">{{ todo.content }}</span>
         {% if session.role != 'guest' %}
         <form method="POST" action="{{ url_for('todo_delete', todo_id=todo.id) }}">
-          <button type="submit" class="btn btn-ghost"
-            style="padding: 0.4rem; border-radius: 10px; width: 36px; height: 36px; color: var(--color-muted); border: none;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
+          <button type="submit" class="btn btn-ghost" aria-label="Delete task" style="padding: 0.4rem; border-radius: 10px; width: 36px; height: 36px; color: var(--color-muted); border: none; cursor: pointer; transition: color 0.2s, background 0.2s;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
             </svg>
           </button>
         </form>
         {% endif %}
-      </div>
+      </article>
       {% endfor %}
+      
       {% if not todos %}
-      <div style="text-align: center; padding: 3rem 0; color: var(--color-muted);">
-        <p style="font-size: 2.5rem; margin-bottom: 1rem;">🍃</p>
-        <p style="font-weight: 800; color: var(--color-text); font-size: 1.1rem;">You're all set!</p>
-        <p style="font-size: 0.9rem;">No pending tasks for today.</p>
+      <div style="text-align: center; padding: 4rem 0; color: var(--color-muted);">
+        <p style="font-size: 3rem; margin-bottom: 1rem; filter: grayscale(100%); opacity: 0.5;">🍃</p>
+        <p style="font-weight: 800; color: var(--color-text); font-size: 1.25rem;">You're all set!</p>
+        <p style="font-size: 0.95rem; margin-top: 0.5rem;">No pending tasks for today.</p>
       </div>
       {% endif %}
     </div>
-  </div>
+  </section>
 
-  <!-- Announcements -->
-  <div class="card glass-panel">
-    <div class="section-header">
-      <div class="section-title">
-        <span>📢</span>
-        Family Feed
-      </div>
-      <a href="{{ url_for('board') }}" class="btn btn-ghost"
-        style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 12px;">View All</a>
-    </div>
+  <section class="card glass-panel delay-3">
+    <header class="section-header">
+      <h2 class="section-title">
+        <span aria-hidden="true">📢</span> Family Feed
+      </h2>
+      <a href="{{ url_for('board') }}" class="btn btn-ghost" style="padding: 0.5rem 1.25rem; font-size: 0.85rem; font-weight: 700; border-radius: 12px; background: var(--glass-bg);">View All</a>
+    </header>
 
-    <div class="ann-list" style="display: flex; flex-direction: column; gap: 1rem;">
+    <div class="ann-list" style="display: flex; flex-direction: column; gap: 1rem;" role="list">
       {% for ann in announcements[:3] %}
-      <div class="ann-item {% if ann.pinned %}is-pinned{% endif %}"
-        style="padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: var(--radius-sm); border: 1px solid var(--color-border); transition: all var(--transition); cursor: pointer;"
-        onclick="window.location.href='{{ url_for('board') }}'">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-          <div class="ann-title" style="font-weight: 800; font-size: 1.1rem;">{{ ann.title }}</div>
-          {% if ann.pinned %}<span style="font-size: 0.8rem;">📌</span>{% endif %}
-        </div>
+      <article class="ann-item {% if ann.pinned %}is-pinned{% endif %}" role="button" tabindex="0" data-href="{{ url_for('board') }}">
+        <header style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+          <h3 class="ann-title" style="font-weight: 800; font-size: 1.15rem; margin: 0;">{{ ann.title }}</h3>
+          {% if ann.pinned %}<span aria-label="Pinned announcement" style="font-size: 0.9rem;">📌</span>{% endif %}
+        </header>
+        
         {% if ann.body %}
-        <div class="ann-body"
-          style="font-size: 0.9rem; color: var(--color-muted); line-height: 1.6; margin-bottom: 1.25rem;">
+        <p class="ann-body" style="font-size: 0.95rem; color: var(--color-muted); line-height: 1.6; margin-bottom: 1.25rem;">
           {{ ann.body[:140] }}{% if ann.body|length > 140 %}&hellip;{% endif %}
-        </div>
+        </p>
         {% endif %}
-        <div class="ann-footer"
-          style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; font-weight: 800; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.1em;">
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <div class="avatar" style="width: 20px; height: 20px; font-size: 0.6rem;">{{ ann.author[0]|upper }}</div>
+        
+        <footer class="ann-footer" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; font-weight: 800; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.1em;">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <div class="avatar" style="width: 24px; height: 24px; font-size: 0.7rem; background: var(--color-primary); color: #fff; border-radius: 50%; display: grid; place-items: center;">{{ ann.author[0]|upper }}</div>
             <span>{{ ann.author|capitalize }}</span>
           </div>
-          <span>{{ ann.created_at[:10] }}</span>
-        </div>
-      </div>
+          <time datetime="{{ ann.created_at[:10] }}">{{ ann.created_at[:10] }}</time>
+        </footer>
+      </article>
       {% endfor %}
+
       {% if not announcements %}
-      <div style="text-align: center; padding: 3rem 0; color: var(--color-muted);">
-        <p style="font-size: 2.5rem; margin-bottom: 1rem;">📭</p>
-        <p style="font-weight: 800; color: var(--color-text);">Quiet day...</p>
-        <p style="font-size: 0.9rem;">No new announcements yet.</p>
+      <div style="text-align: center; padding: 4rem 0; color: var(--color-muted);">
+        <p style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📭</p>
+        <p style="font-weight: 800; color: var(--color-text); font-size: 1.25rem;">Quiet day...</p>
+        <p style="font-size: 0.95rem; margin-top: 0.5rem;">No new announcements yet.</p>
       </div>
       {% endif %}
     </div>
-  </div>
+  </section>
 </div>
 
 <div class="grid grid-3" style="margin-top: 1.5rem;">
-  <!-- Weather -->
-  <div class="card weather-card glass-panel" id="weather-widget">
-    <div style="text-align: center; padding: 2.5rem 0; opacity: 0.5;">
-      <div class="spinner"
-        style="width: 28px; height: 28px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1.25rem;">
-      </div>
-      <span style="font-weight: 700; font-size: 0.9rem;">Gathering clouds...</span>
+  <section class="card weather-card glass-panel delay-4" id="weather-widget">
+    <div style="text-align: center; padding: 3rem 0; opacity: 0.6;">
+      <div class="spinner" style="width: 32px; height: 32px; border: 3px solid var(--glass-border); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite; margin: 0 auto 1.25rem;"></div>
+      <span style="font-weight: 700; font-size: 0.95rem; letter-spacing: 0.05em;">Gathering clouds...</span>
     </div>
-  </div>
+  </section>
 
-  <!-- Quick Links -->
-  <div class="card glass-panel">
-    <div class="section-header">
-      <div class="section-title">
-        <span>🔗</span>
-        Quick Access
-      </div>
-    </div>
+  <section class="card glass-panel delay-4">
+    <header class="section-header">
+      <h2 class="section-title">
+        <span aria-hidden="true">🔗</span> Quick Access
+      </h2>
+    </header>
 
     <div class="quick-links">
       {% for bm in bookmarks %}
-      <a href="{{ bm.url }}" target="_blank" class="link-item">
-        <div class="link-icon"
-          style="background: rgba(255,255,255,0.05); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-          {{ bm.icon }}</div>
-        <span class="link-label" style="margin-top: 0.25rem;">{{ bm.title }}</span>
+      <a href="{{ bm.url }}" target="_blank" rel="noopener noreferrer" class="link-item">
+        <div class="link-icon" style="background: rgba(255,255,255,0.08); width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+          {{ bm.icon }}
+        </div>
+        <span class="link-label" style="font-size: 0.8rem; font-weight: 700; color: var(--color-text); margin-top: 0.25rem;">{{ bm.title }}</span>
       </a>
       {% endfor %}
+      
       {% if session.role != 'guest' %}
-      <a href="{{ url_for('admin_panel') }}" class="link-item"
-        style="border-style: dashed; background: transparent; opacity: 0.6;">
-        <div class="link-icon"
-          style="width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 2px dashed var(--color-border);">
-          +</div>
-        <span class="link-label">Manage</span>
+      <a href="{{ url_for('admin_panel') }}" class="link-item" style="border: 1px dashed var(--color-border); background: transparent; opacity: 0.7;">
+        <div class="link-icon" style="width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">+</div>
+        <span class="link-label" style="font-size: 0.8rem; font-weight: 700; color: var(--color-muted);">Manage</span>
       </a>
       {% endif %}
     </div>
-  </div>
+  </section>
 
-  <!-- Upcoming Events -->
-  <div class="card glass-panel">
-    <div class="section-header">
-      <div class="section-title">
-        <span>📅</span>
-        Timeline
-      </div>
-      <a href="{{ url_for('calendar') }}" class="btn btn-ghost"
-        style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 12px;">Full View</a>
-    </div>
+  <section class="card glass-panel delay-4">
+    <header class="section-header">
+      <h2 class="section-title">
+        <span aria-hidden="true">📅</span> Timeline
+      </h2>
+      <a href="{{ url_for('calendar') }}" class="btn btn-ghost" style="padding: 0.5rem 1.25rem; font-size: 0.85rem; font-weight: 700; border-radius: 12px; background: var(--glass-bg);">Full View</a>
+    </header>
 
     <div style="display: flex; flex-direction: column; gap: 1rem;">
       {% for ev in events[:3] %}
-      <div
-        style="padding: 1.25rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px solid var(--color-border); border-left: 4px solid var(--color-primary); transition: all var(--transition); cursor: pointer;"
-        onclick="window.location.href='{{ url_for('calendar') }}'">
-        <div style="font-weight: 800; font-size: 1rem; margin-bottom: 0.5rem;">{{ ev.title }}</div>
-        <div
-          style="font-size: 0.75rem; color: var(--color-primary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem;">
-          <span>🗓️</span> {{ ev.event_date[:10] }}
-        </div>
-      </div>
+      <article class="timeline-item" data-href="{{ url_for('calendar') }}">
+        <h3 style="font-weight: 800; font-size: 1.05rem; margin: 0 0 0.5rem 0;">{{ ev.title }}</h3>
+        <time datetime="{{ ev.event_date[:10] }}" style="font-size: 0.75rem; color: var(--color-primary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem;">
+          <span aria-hidden="true">🗓️</span> {{ ev.event_date[:10] }}
+        </time>
+      </article>
       {% endfor %}
+      
       {% if not events %}
-      <div style="text-align: center; color: var(--color-muted); padding: 2rem 0;">
-        <p style="font-size: 2rem; margin-bottom: 0.75rem;">📅</p>
-        <p style="font-size: 0.9rem; font-weight: 700;">Clear schedule</p>
+      <div style="text-align: center; color: var(--color-muted); padding: 3rem 0;">
+        <p style="font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.5;">📅</p>
+        <p style="font-size: 1.1rem; font-weight: 800; color: var(--color-text);">Clear schedule</p>
       </div>
       {% endif %}
     </div>
-  </div>
+  </section>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-  (function () {
-    // Progress bar animation
-    document.querySelectorAll('.progress-fill').forEach(el => {
-      setTimeout(() => {
-        el.style.width = el.getAttribute('data-pct') + '%';
-      }, 300);
-    });
-
-    // Greeting logic
-    const greetEl = document.getElementById('greeting-text');
-    const dateEl = document.getElementById('date-display');
-    const h = new Date().getHours();
-    const salutation = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-    if (greetEl) greetEl.textContent = salutation + ', {{ session.username|capitalize }}.';
-
-    if (dateEl) {
-      const now = new Date();
-      dateEl.textContent = now.toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric'
+  document.addEventListener('DOMContentLoaded', () => {
+    
+    // --- 1. Progress Bar Animation ---
+    const progressFills = document.querySelectorAll('.progress-fill');
+    // Using IntersectionObserver or simple timeout to animate on load
+    setTimeout(() => {
+      progressFills.forEach(el => {
+        el.style.width = `${el.getAttribute('data-pct') || 0}%`;
       });
+    }, 400);
 
-      // Year progress calculation
-      const start = new Date(now.getFullYear(), 0, 1);
-      const end = new Date(now.getFullYear() + 1, 0, 1);
-      const progress = (now - start) / (end - start);
-      const yearPct = Math.floor(progress * 100);
+    // --- 2. Dynamic Greeting & Date ---
+    const initHeader = () => {
+      const greetEl = document.getElementById('greeting-text');
+      const dateEl = document.getElementById('date-display');
+      const now = new Date();
+      const hour = now.getHours();
+      
+      // Salutation logic
+      let salutation = 'Good evening';
+      if (hour < 12) salutation = 'Good morning';
+      else if (hour < 17) salutation = 'Good afternoon';
+      
+      if (greetEl) {
+        greetEl.textContent = `${salutation}, {{ session.username|capitalize }}.`;
+      }
 
+      // Date Formatting
+      if (dateEl) {
+        dateEl.textContent = new Intl.DateTimeFormat('en-US', {
+          weekday: 'long', month: 'long', day: 'numeric'
+        }).format(now);
+      }
+
+      // --- 3. Year Progress Calculation ---
       const yearBar = document.getElementById('year-bar');
       const yearPctText = document.getElementById('year-pct');
       const yearDisplay = document.getElementById('year-display');
 
-      if (yearBar) {
-        setTimeout(() => {
-          yearBar.style.width = yearPct + '%';
-          if (yearPctText) yearPctText.textContent = yearPct + '%';
-          const daysLeft = Math.floor((end - now) / 86400000);
-          if (yearDisplay) yearDisplay.textContent = now.getFullYear() + ' • ' + daysLeft + ' days remaining';
-        }, 500);
-      }
-    }
+      if (yearBar && yearPctText && yearDisplay) {
+        const currentYear = now.getFullYear();
+        const start = new Date(currentYear, 0, 1);
+        const end = new Date(currentYear + 1, 0, 1);
+        
+        const progress = (now - start) / (end - start);
+        const yearPct = Math.floor(progress * 100);
+        const daysLeft = Math.floor((end - now) / (1000 * 60 * 60 * 24));
 
-    // Weather Fetching
-    function fetchWeather() {
+        setTimeout(() => {
+          yearBar.style.width = `${yearPct}%`;
+          yearPctText.textContent = `${yearPct}%`;
+          yearDisplay.textContent = `${currentYear} • ${daysLeft} days remaining`;
+        }, 600);
+      }
+    };
+    initHeader();
+
+    // --- 4. Clickable dashboard cards ---
+    document.querySelectorAll('[data-href]').forEach(card => {
+      const navigate = () => {
+        window.location.href = card.dataset.href;
+      };
+
+      card.addEventListener('click', navigate);
+      card.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          navigate();
+        }
+      });
+    });
+
+    // --- 5. Weather API (Refactored to Async/Await) ---
+    const fetchWeather = async () => {
+      const widget = document.getElementById('weather-widget');
+      if (!widget) return;
+
       const lat = -37.9034;
       const lon = 145.0416;
       const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=celsius&windspeed_unit=kmh`;
 
-      fetch(url)
-        .then(res => res.json())
-        .then(data => {
-          if (!data.current_weather) return;
-          const w = data.current_weather;
-          const wmoCodes = {
-            0: ['Clear sky', '☀️'], 1: ['Mainly clear', '🌤️'], 2: ['Partly cloudy', '⛅'], 3: ['Overcast', '☁️'],
-            45: ['Fog', '🌫️'], 48: ['Depositing rime fog', '🌫️'],
-            51: ['Light drizzle', '🌧️'], 53: ['Moderate drizzle', '🌧️'], 55: ['Dense drizzle', '🌧️'],
-            61: ['Slight rain', '☔'], 63: ['Moderate rain', '☔'], 65: ['Heavy rain', '🌧️'],
-            71: ['Slight snow', '❄️'], 73: ['Moderate snow', '❄️'], 75: ['Heavy snow', '❄️'],
-            95: ['Thunderstorm', '⛈️']
-          };
-          const [desc, icon] = wmoCodes[w.weathercode] || ['Unknown', '🌡️'];
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Weather data unavailable');
+        
+        const data = await response.json();
+        const w = data.current_weather;
+        
+        // WMO Code Dictionary
+        const wmoCodes = {
+          0: ['Clear sky', '☀️'], 1: ['Mainly clear', '🌤️'], 2: ['Partly cloudy', '⛅'], 3: ['Overcast', '☁️'],
+          45: ['Fog', '🌫️'], 48: ['Depositing rime fog', '🌫️'],
+          51: ['Light drizzle', '🌧️'], 53: ['Moderate drizzle', '🌧️'], 55: ['Dense drizzle', '🌧️'],
+          61: ['Slight rain', '☔'], 63: ['Moderate rain', '☔'], 65: ['Heavy rain', '🌧️'],
+          71: ['Slight snow', '❄️'], 73: ['Moderate snow', '❄️'], 75: ['Heavy snow', '❄️'],
+          95: ['Thunderstorm', '⛈️']
+        };
+        
+        const [desc, icon] = wmoCodes[w.weathercode] || ['Unknown', '🌡️'];
 
-          const widget = document.getElementById('weather-widget');
-          if (widget) {
-            widget.innerHTML = `
-              <div class="weather-main">
-                <div class="weather-temp-wrap">
-                  <div class="weather-temp-big">${Math.round(w.temperature)}°</div>
-                  <div style="font-weight: 700; color: var(--color-primary); margin-top: 0.25rem;">${desc}</div>
-                </div>
-                <div class="weather-icon-big">${icon}</div>
+        // Fade out skeleton, fade in data
+        widget.style.opacity = '0';
+        setTimeout(() => {
+          widget.innerHTML = `
+            <div class="weather-main">
+              <div class="weather-temp-wrap">
+                <div class="weather-temp-big">${Math.round(w.temperature)}°</div>
+                <div style="font-weight: 800; color: var(--color-primary); margin-top: 0.5rem; font-size: 1.1rem; letter-spacing: 0.02em;">${desc}</div>
               </div>
-              <div class="weather-details">
-                <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
-                  <span>📍</span> Ormond, VIC
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; justify-content: flex-end;">
-                  <span>💨</span> ${w.windspeed} km/h
-                </div>
+              <div class="weather-icon-big" aria-hidden="true">${icon}</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem; color: var(--color-muted); border-top: 1px solid var(--glass-border); padding-top: 1.25rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700;">
+                <span aria-hidden="true">📍</span> Ormond, VIC
               </div>
-            `;
-          }
-        })
-        .catch(err => {
-          console.error('Weather fetch error:', err);
-          const widget = document.getElementById('weather-widget');
-          if (widget) widget.innerHTML = '<p style="text-align: center; color: var(--color-danger);">Weather unavailable</p>';
-        });
-    }
+              <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; justify-content: flex-end;">
+                <span aria-hidden="true">💨</span> ${w.windspeed} km/h
+              </div>
+            </div>
+          `;
+          widget.style.transition = 'opacity 0.4s ease';
+          widget.style.opacity = '1';
+        }, 300);
+
+      } catch (err) {
+        console.error('Weather fetch error:', err);
+        widget.innerHTML = `
+          <div style="text-align: center; padding: 2rem 0; color: var(--color-danger);">
+            <span style="font-size: 2rem; display: block; margin-bottom: 0.5rem;">⚠️</span>
+            <strong>Weather unavailable</strong>
+          </div>`;
+      }
+    };
+    
     fetchWeather();
-  })();
+  });
 </script>
 {% endblock %}

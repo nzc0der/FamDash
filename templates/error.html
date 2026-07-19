@@ -1,38 +1,36 @@
 {% extends "base.html" %}
 
-{% block title %}{{ code }} - Family Dashboard{% endblock %}
+{% block title %}Error {{ error_code | default('404') }} - Family Dashboard{% endblock %}
 
 {% block content %}
-<div style="
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  text-align: center;
-  gap: 1rem;
-">
-  <div style="
-    font-size: 5rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    line-height: 1;
-  ">{{ code }}</div>
-  <h1 style="font-size: 1.3rem; font-weight: 600;">{{ message }}</h1>
-  <p class="text-muted" style="max-width: 360px;">
-    {% if code == 403 %}
-    You do not have permission to access this page.
-    {% elif code == 404 %}
-    The page you are looking for does not exist or has been moved.
-    {% else %}
-    Something went wrong on the server. Please try again or contact the admin.
-    {% endif %}
-  </p>
-  <a href="{{ url_for('index') }}" class="btn btn-primary" style="margin-top:0.5rem;">
-    Go Home
-  </a>
+<div style="display: flex; justify-content: center; align-items: center; min-height: 65vh;">
+  <div class="card" style="max-width: 500px; width: 100%; text-align: center; padding: 3rem 2rem; animation: slideUp 0.4s ease;">
+    
+    <div style="font-size: 4rem; margin-bottom: 0.5rem; color: var(--color-danger);">
+      ⚠️
+    </div>
+    
+    <h1 style="font-size: 4rem; font-weight: 800; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--color-danger), var(--color-accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+      {{ error_code | default('Oops!') }}
+    </h1>
+    
+    <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem; color: var(--color-text);">
+      {{ error_name | default('Something went wrong') }}
+    </h2>
+    
+    <p style="color: var(--color-muted); margin-bottom: 2.5rem; font-size: 1.05rem; line-height: 1.5;">
+      {{ error_message | default("We can't seem to find the page you're looking for, or an unexpected error occurred.") }}
+    </p>
+    
+    <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+      <button onclick="window.history.back()" class="btn btn-ghost">
+        Go Back
+      </button>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+        <span>🏠</span> Dashboard
+      </a>
+    </div>
+    
+  </div>
 </div>
 {% endblock %}
