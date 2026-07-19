@@ -4,79 +4,130 @@
 
 {% block extra_head %}
 <style>
-  /* --- Core Variables & Animations --- */
+  /* =========================================
+     CORE VARIABLES & ANIMATIONS
+     ========================================= */
   :root {
-    --glass-bg: rgba(255, 255, 255, 0.04);
+    --glass-bg: rgba(255, 255, 255, 0.03);
     --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-hover: rgba(255, 255, 255, 0.08);
-    --shadow-soft: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
-    --blur-intensity: 12px;
+    --glass-highlight: rgba(255, 255, 255, 0.12);
+    --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.3);
+    --shadow-glow: 0 0 20px rgba(var(--color-primary-rgb), 0.2);
+    --blur-intensity: 16px;
+    --radius-sm: 10px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --transition-smooth: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-bounce: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
 
-  @keyframes fadeInTab {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  @keyframes slideInUp {
+    0% { opacity: 0; transform: translateY(15px); }
+    100% { opacity: 1; transform: translateY(0); }
   }
 
-  /* --- Layout --- */
+  @keyframes modalIn {
+    0% { opacity: 0; transform: scale(0.95) translateY(10px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* =========================================
+     TYPOGRAPHY & HEADERS
+     ========================================= */
+  .page-header {
+    margin-bottom: 3rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .page-title {
+    font-size: 2.25rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin: 0;
+    color: var(--color-text);
+  }
+
+  .section-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .section-title {
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  .section-subtitle {
+    color: var(--color-muted);
+    font-size: 0.95rem;
+    margin-top: 0.35rem;
+  }
+
+  /* =========================================
+     LAYOUT & SIDEBAR
+     ========================================= */
   .admin-layout {
     display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 2.5rem;
+    grid-template-columns: 260px 1fr;
+    gap: 3rem;
     align-items: start;
   }
 
-  /* --- Sidebar Navigation --- */
   .admin-sidebar {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.4rem;
     position: sticky;
     top: 2rem;
   }
 
   .tab-btn {
-    padding: 1.15rem 1.25rem;
-    border-radius: var(--radius-sm, 12px);
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-sm);
     background: transparent;
     border: 1px solid transparent;
     color: var(--color-muted);
     font-size: 0.95rem;
-    font-weight: 700;
+    font-weight: 600;
     text-align: left;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: var(--transition-smooth);
     display: flex;
     align-items: center;
     gap: 0.85rem;
   }
 
   .tab-btn:hover {
-    background: var(--glass-hover);
+    background: var(--glass-bg);
     color: var(--color-text);
     transform: translateX(4px);
   }
 
   .tab-btn:focus-visible {
     outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
+    outline-offset: -2px;
   }
 
   .tab-btn[aria-selected="true"] {
-    background: rgba(var(--color-primary-rgb), 0.15);
-    border-color: rgba(var(--color-primary-rgb), 0.25);
-    color: var(--color-primary);
+    background: rgba(var(--color-primary-rgb), 0.1);
+    border: 1px solid rgba(var(--color-primary-rgb), 0.2);
+    color: var(--color-text);
+    font-weight: 700;
     transform: none;
-    box-shadow: inset 4px 0 0 var(--color-primary);
+    box-shadow: inset 3px 0 0 var(--color-primary);
   }
 
-  /* --- Content Cards --- */
+  /* =========================================
+     CONTENT CARDS & TABS
+     ========================================= */
   .admin-card {
     padding: 2.5rem;
     background: var(--glass-bg);
@@ -84,7 +135,7 @@
     -webkit-backdrop-filter: blur(var(--blur-intensity));
     border: 1px solid var(--glass-border);
     box-shadow: var(--shadow-soft);
-    border-radius: var(--radius-md, 16px);
+    border-radius: var(--radius-lg);
   }
 
   .admin-tab {
@@ -93,40 +144,78 @@
 
   .admin-tab.active {
     display: block;
-    animation: fadeInTab 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: slideInUp 0.5s var(--transition-smooth) forwards;
   }
 
-  /* --- Lists & Rows --- */
-  .user-row, .backup-item {
+  /* =========================================
+     LISTS, ROWS & BADGES
+     ========================================= */
+  .data-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 1.25rem 1.5rem;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 14px;
-    margin-bottom: 0.85rem;
+    background: rgba(255, 255, 255, 0.015);
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
     border: 1px solid var(--glass-border);
-    transition: all 0.2s ease;
+    transition: var(--transition-smooth);
   }
 
-  .user-row:hover, .backup-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.15);
+  .data-row:hover {
+    background: var(--glass-bg);
+    border-color: var(--glass-highlight);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
 
-  .badge-role {
+  .row-info {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb), 0.6));
+    color: #fff;
+    border-radius: var(--radius-sm);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 4px 10px rgba(var(--color-primary-rgb), 0.3);
+  }
+
+  .row-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--color-text);
+  }
+
+  .row-meta {
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  .badge {
     font-size: 0.7rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 4px 10px;
+    letter-spacing: 0.08em;
+    padding: 4px 12px;
     border-radius: 99px;
     font-weight: 800;
+    display: inline-block;
   }
+  .badge-admin { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+  .badge-user { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); }
 
-  .badge-admin { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
-  .badge-user { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-
-  /* --- Maintenance Cards --- */
+  /* =========================================
+     MAINTENANCE GRID
+     ========================================= */
   .maintenance-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -134,47 +223,205 @@
   }
 
   .maint-card {
-    padding: 2rem;
-    background: rgba(255, 255, 255, 0.02);
+    padding: 2.25rem;
+    background: rgba(255, 255, 255, 0.01);
     border: 1px solid var(--glass-border);
-    border-radius: 16px;
+    border-radius: var(--radius-md);
     display: flex;
     flex-direction: column;
-    transition: transform 0.3s ease, border-color 0.3s ease;
+    transition: var(--transition-bounce);
   }
 
   .maint-card:hover {
-    transform: translateY(-4px);
-    border-color: var(--color-primary);
+    transform: translateY(-5px) scale(1.01);
+    border-color: rgba(var(--color-primary-rgb), 0.4);
+    box-shadow: var(--shadow-glow);
   }
 
   .maint-card.danger-card:hover {
-    border-color: var(--color-danger);
+    border-color: rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
   }
 
-  /* --- Responsive --- */
+  .maint-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1.25rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+  }
+
+  .maint-desc {
+    font-size: 0.95rem;
+    color: var(--color-muted);
+    margin-bottom: 2rem;
+    flex-grow: 1;
+    line-height: 1.6;
+  }
+
+  /* =========================================
+     BUTTONS & ACTIONS
+     ========================================= */
+  .action-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .btn-custom {
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    transition: var(--transition-bounce);
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .btn-primary-custom {
+    background: var(--color-primary);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(var(--color-primary-rgb), 0.3);
+  }
+  .btn-primary-custom:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(var(--color-primary-rgb), 0.4);
+    background: linear-gradient(to right, var(--color-primary), var(--color-accent));
+  }
+
+  .btn-ghost-custom {
+    background: var(--glass-bg);
+    color: var(--color-text);
+    border: 1px solid var(--glass-border);
+  }
+  .btn-ghost-custom:hover {
+    background: var(--glass-highlight);
+    border-color: rgba(255,255,255,0.2);
+  }
+  
+  .btn-danger-custom {
+    background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+  .btn-danger-custom:hover {
+    background: #ef4444;
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+  }
+
+  /* =========================================
+     MODALS & FORMS
+     ========================================= */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: grid;
+    place-items: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  .modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .modal-box {
+    background: var(--bg-color);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border-radius: var(--radius-lg);
+    width: 90%;
+    max-width: 480px;
+    padding: 2.5rem;
+    position: relative;
+    transform: scale(0.95) translateY(20px);
+    transition: var(--transition-bounce);
+  }
+
+  .modal-overlay.active .modal-box {
+    transform: scale(1) translateY(0);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+
+  .modal-close {
+    background: transparent;
+    border: none;
+    color: var(--color-muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.2s;
+    line-height: 1;
+  }
+  .modal-close:hover { color: var(--color-text); }
+
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--color-muted);
+    margin-bottom: 0.6rem;
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 0.85rem 1.25rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    background: rgba(0,0,0,0.2);
+    color: var(--color-text);
+    font-size: 1rem;
+    transition: all 0.2s ease;
+  }
+  .form-control:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.15);
+    background: rgba(0,0,0,0.4);
+  }
+
+  /* =========================================
+     RESPONSIVE
+     ========================================= */
   @media (max-width: 900px) {
-    .admin-layout { grid-template-columns: 1fr; gap: 1.5rem; }
+    .admin-layout { grid-template-columns: 1fr; gap: 2rem; }
     .admin-sidebar { 
       flex-direction: row; 
       overflow-x: auto; 
-      padding-bottom: 0.5rem; 
       top: 0;
-      background: var(--bg-color); /* Prevent transparency issues when scrolling */
+      background: var(--bg-color);
       z-index: 10;
+      padding-bottom: 0.5rem;
     }
-    .tab-btn { white-space: nowrap; padding: 1rem; }
-    .user-row, .backup-item { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .tab-btn { white-space: nowrap; }
+    .data-row { flex-direction: column; align-items: flex-start; gap: 1.25rem; }
     .action-group { width: 100%; justify-content: flex-end; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<header class="section-header" style="margin-bottom: 2.5rem;">
-  <h1 class="section-title" style="font-size: 2rem;">
-    <span aria-hidden="true">⚙️</span> System Administration
-  </h1>
+<header class="page-header">
+  <span aria-hidden="true" style="font-size: 2.25rem;">⚙️</span>
+  <h1 class="page-title">System Administration</h1>
 </header>
 
 <div class="admin-layout">
@@ -193,38 +440,36 @@
   <main class="admin-content">
     
     <section id="tab-users" class="admin-tab admin-card active" role="tabpanel" aria-labelledby="btn-users">
-      <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+      <header class="section-header-flex">
         <div>
-          <h2 style="font-weight: 800; font-size: 1.5rem; margin: 0;">User Management</h2>
-          <p style="color: var(--color-muted); font-size: 0.9rem; margin-top: 0.25rem;">Manage access and permissions for your family.</p>
+          <h2 class="section-title">User Management</h2>
+          <p class="section-subtitle">Manage access and permissions for your family.</p>
         </div>
-        <button class="btn btn-primary" style="border-radius: 12px; font-weight: 700;" onclick="openModal('add-user-modal')">
+        <button class="btn-custom btn-primary-custom" onclick="openModal('add-user-modal')">
           <span aria-hidden="true">+</span> New User
         </button>
       </header>
 
       <div class="users-list" role="list">
         {% for u in all_users %}
-        <article class="user-row" role="listitem">
-          <div style="display: flex; align-items: center; gap: 1.25rem;">
-            <div class="avatar" style="width: 48px; height: 48px; font-size: 1.25rem; background: var(--color-primary); color: #fff; border-radius: 12px; display: grid; place-items: center;">
-              {{ u.username[0]|upper }}
-            </div>
+        <article class="data-row" role="listitem">
+          <div class="row-info">
+            <div class="avatar">{{ u.username[0]|upper }}</div>
             <div>
-              <div style="font-weight: 800; font-size: 1.1rem;">{{ u.username|capitalize }}</div>
+              <div class="row-title">{{ u.username|capitalize }}</div>
               <div style="margin-top: 6px;">
-                <span class="badge-role {% if u.role == 'admin' %}badge-admin{% else %}badge-user{% endif %}">
+                <span class="badge {% if u.role == 'admin' %}badge-admin{% else %}badge-user{% endif %}">
                   {{ u.role }}
                 </span>
               </div>
             </div>
           </div>
           
-          <div class="action-group" style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-ghost btn-sm" style="border-radius: 8px;" onclick="openResetModal('{{ u.username }}')">Reset Pwd</button>
+          <div class="action-group">
+            <button class="btn-custom btn-ghost-custom" onclick="openResetModal('{{ u.username }}')">Reset Pwd</button>
             {% if u.username != session.username %}
             <form method="POST" action="{{ url_for('admin_delete_user', user_id=u.id) }}" class="require-confirm" data-msg="Are you sure you want to delete {{ u.username|capitalize }}'s account? This action cannot be undone.">
-              <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--color-danger); border-radius: 8px; background: rgba(239, 68, 68, 0.1);">Delete</button>
+              <button type="submit" class="btn-custom btn-danger-custom">Delete</button>
             </form>
             {% endif %}
           </div>
@@ -234,78 +479,76 @@
     </section>
 
     <section id="tab-backups" class="admin-tab admin-card" role="tabpanel" aria-labelledby="btn-backups">
-      <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+      <header class="section-header-flex">
         <div>
-          <h2 style="font-weight: 800; font-size: 1.5rem; margin: 0;">Database Backups</h2>
-          <p style="color: var(--color-muted); font-size: 0.9rem; margin-top: 0.25rem;">Secure and restore your system data.</p>
+          <h2 class="section-title">Database Backups</h2>
+          <p class="section-subtitle">Secure and restore your system data.</p>
         </div>
         <form method="POST" action="{{ url_for('admin_backup_create') }}">
-          <button type="submit" class="btn btn-primary" style="border-radius: 12px; font-weight: 700;">Create Backup Now</button>
+          <button type="submit" class="btn-custom btn-primary-custom">Create Backup</button>
         </form>
       </header>
 
       <div class="backups-list" role="list">
         {% for b in backups %}
-        <article class="backup-item" role="listitem">
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <div aria-hidden="true" style="font-size: 1.5rem; opacity: 0.7;">📦</div>
+        <article class="data-row" role="listitem">
+          <div class="row-info">
+            <div aria-hidden="true" style="font-size: 1.75rem; opacity: 0.8;">📦</div>
             <div>
-              <div style="font-weight: 800; font-size: 1.05rem; font-family: monospace; color: var(--color-text);">{{ b.filename }}</div>
-              <div style="font-size: 0.8rem; color: var(--color-muted); margin-top: 4px; font-weight: 600;">
-                {{ b.size }} &bull; Created {{ b.date }}
-              </div>
+              <div class="row-title" style="font-family: monospace;">{{ b.filename }}</div>
+              <div class="row-meta">{{ b.size }} &bull; Created {{ b.date }}</div>
             </div>
           </div>
           
-          <div class="action-group" style="display: flex; gap: 0.5rem;">
-            <a href="/admin/backups/download/{{ b.filename }}" class="btn btn-ghost btn-sm" style="border-radius: 8px;">Download</a>
-            <form method="POST" action="{{ url_for('admin_restore') }}" class="require-confirm" data-msg="CRITICAL: This will overwrite current live data with the backup '{{ b.filename }}'. Ensure you know what you are doing. Proceed?">
+          <div class="action-group">
+            <a href="/admin/backups/download/{{ b.filename }}" class="btn-custom btn-ghost-custom">Download</a>
+            <form method="POST" action="{{ url_for('admin_restore') }}" class="require-confirm" data-msg="CRITICAL: This will overwrite current live data with the backup '{{ b.filename }}'. Proceed?">
               <input type="hidden" name="backup_name" value="{{ b.filename }}">
-              <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--color-accent); background: rgba(var(--color-accent-rgb), 0.1); border-radius: 8px;">Restore</button>
+              <button type="submit" class="btn-custom" style="background: rgba(var(--color-accent-rgb), 0.15); color: var(--color-accent); border: 1px solid rgba(var(--color-accent-rgb), 0.3);">Restore</button>
             </form>
             <form method="POST" action="{{ url_for('admin_backup_delete', filename=b.filename) }}" class="require-confirm" data-msg="Permanently delete the backup file '{{ b.filename }}'?">
-              <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--color-danger); border-radius: 8px;">Delete</button>
+              <button type="submit" class="btn-custom btn-danger-custom">Delete</button>
             </form>
           </div>
         </article>
         {% endfor %}
         
         {% if not backups %}
-        <div style="text-align: center; padding: 4rem 2rem; color: var(--color-muted); border: 1px dashed var(--glass-border); border-radius: 16px;">
-          <span style="font-size: 2.5rem; display: block; margin-bottom: 1rem; opacity: 0.5;">🗄️</span>
-          <p style="font-weight: 700; font-size: 1.1rem; color: var(--color-text);">No backups found</p>
-          <p style="font-size: 0.9rem;">Create a backup to secure your data.</p>
+        <div style="text-align: center; padding: 5rem 2rem; border: 2px dashed var(--glass-border); border-radius: var(--radius-lg);">
+          <span style="font-size: 3rem; display: block; margin-bottom: 1rem; opacity: 0.4;">🗄️</span>
+          <p class="row-title">No backups found</p>
+          <p class="row-meta" style="font-size: 0.95rem;">Create a backup to secure your data.</p>
         </div>
         {% endif %}
       </div>
     </section>
 
     <section id="tab-maintenance" class="admin-tab admin-card" role="tabpanel" aria-labelledby="btn-maintenance">
-      <header style="margin-bottom: 2rem;">
-        <h2 style="font-weight: 800; font-size: 1.5rem; margin: 0;">System Operations</h2>
-        <p style="color: var(--color-muted); font-size: 0.9rem; margin-top: 0.25rem;">Core system controls and danger zones.</p>
+      <header style="margin-bottom: 2.5rem;">
+        <h2 class="section-title">System Operations</h2>
+        <p class="section-subtitle">Core system controls and danger zones.</p>
       </header>
       
       <div class="maintenance-grid">
         <article class="maint-card">
-          <div style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">🔄</div>
-          <h3 style="font-weight: 800; font-size: 1.15rem; margin-bottom: 0.5rem;">Auto Update</h3>
-          <p style="font-size: 0.9rem; color: var(--color-muted); margin-bottom: 2rem; flex-grow: 1; line-height: 1.5;">
-            Pull the latest source code changes from the master branch on GitHub and restart the application.
+          <div class="maint-icon" aria-hidden="true">🔄</div>
+          <h3 class="section-title" style="font-size: 1.25rem; margin-bottom: 0.5rem;">Auto Update</h3>
+          <p class="maint-desc">
+            Pull the latest source code changes from the master branch on GitHub and restart the application safely.
           </p>
           <form method="POST" action="{{ url_for('admin_update') }}" class="require-confirm" data-msg="This will briefly take the dashboard offline while updating. Continue?">
-            <button type="submit" class="btn btn-ghost" style="width: 100%; border-radius: 12px; font-weight: 700; border: 1px solid var(--glass-border);">Check for Updates</button>
+            <button type="submit" class="btn-custom btn-ghost-custom" style="width: 100%;">Check for Updates</button>
           </form>
         </article>
 
         <article class="maint-card danger-card">
-          <div style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">⚠️</div>
-          <h3 style="font-weight: 800; font-size: 1.15rem; margin-bottom: 0.5rem; color: var(--color-danger);">Factory Reset</h3>
-          <p style="font-size: 0.9rem; color: var(--color-muted); margin-bottom: 2rem; flex-grow: 1; line-height: 1.5;">
+          <div class="maint-icon" aria-hidden="true">⚠️</div>
+          <h3 class="section-title" style="font-size: 1.25rem; margin-bottom: 0.5rem; color: #f87171;">Factory Reset</h3>
+          <p class="maint-desc">
             Wipe the database clean, delete all users, lists, and events, and return the dashboard to the initial setup wizard.
           </p>
           <form method="POST" action="{{ url_for('admin_reset') }}" class="require-confirm" data-msg="DANGER: This action will permanently erase all data, users, and settings. Are you absolutely certain you wish to factory reset the system?">
-            <button type="submit" class="btn btn-danger" style="width: 100%; border-radius: 12px; font-weight: 700;">Initiate Hard Reset</button>
+            <button type="submit" class="btn-custom btn-danger-custom" style="width: 100%;">Initiate Hard Reset</button>
           </form>
         </article>
       </div>
@@ -314,67 +557,67 @@
   </main>
 </div>
 
-<div id="add-user-modal" class="base-modal-overlay hidden" aria-labelledby="modal-add-title" role="dialog" aria-modal="true">
-  <div class="base-modal-box" style="background: var(--bg-color); border: 1px solid var(--glass-border); box-shadow: var(--shadow-soft);">
-    <header class="base-modal-header" style="border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; margin-bottom: 1.5rem;">
-      <h2 id="modal-add-title" style="font-weight: 800; font-size: 1.25rem; margin: 0;">Add Family Member</h2>
-      <button class="base-modal-close" onclick="closeModal('add-user-modal')" aria-label="Close modal">&times;</button>
+<div id="add-user-modal" class="modal-overlay" aria-labelledby="modal-add-title" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <header class="modal-header">
+      <h2 id="modal-add-title" class="section-title">Add Family Member</h2>
+      <button class="modal-close" onclick="closeModal('add-user-modal')" aria-label="Close modal">&times;</button>
     </header>
     
-    <form method="POST" action="{{ url_for('admin_add_user') }}" style="display: flex; flex-direction: column; gap: 1.25rem;">
+    <form method="POST" action="{{ url_for('admin_add_user') }}">
       <div class="form-group">
-        <label for="new-username" style="font-weight: 600; font-size: 0.9rem; color: var(--color-muted); display: block; margin-bottom: 0.5rem;">Username</label>
-        <input type="text" id="new-username" name="username" required placeholder="e.g. Sarah" style="width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: #fff;">
+        <label for="new-username" class="form-label">Username</label>
+        <input type="text" id="new-username" name="username" class="form-control" required placeholder="e.g. Sarah">
       </div>
       
       <div class="form-group">
-        <label for="new-password" style="font-weight: 600; font-size: 0.9rem; color: var(--color-muted); display: block; margin-bottom: 0.5rem;">Password</label>
-        <input type="password" id="new-password" name="password" required placeholder="••••••••" style="width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: #fff;">
+        <label for="new-password" class="form-label">Password</label>
+        <input type="password" id="new-password" name="password" class="form-control" required placeholder="••••••••">
       </div>
       
       <div class="form-group">
-        <label for="new-role" style="font-weight: 600; font-size: 0.9rem; color: var(--color-muted); display: block; margin-bottom: 0.5rem;">System Role</label>
-        <select id="new-role" name="role" style="width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg-color); color: #fff; cursor: pointer;">
+        <label for="new-role" class="form-label">System Role</label>
+        <select id="new-role" name="role" class="form-control" style="cursor: pointer;">
           <option value="user">Family Member (Standard)</option>
           <option value="admin">System Admin (Full Access)</option>
         </select>
       </div>
       
       <div class="form-group">
-        <label for="new-shopping" style="font-weight: 600; font-size: 0.9rem; color: var(--color-muted); display: block; margin-bottom: 0.5rem;">Shopping Permission</label>
-        <select id="new-shopping" name="shopping_permission" style="width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg-color); color: #fff; cursor: pointer;">
+        <label for="new-shopping" class="form-label">Shopping Permission</label>
+        <select id="new-shopping" name="shopping_permission" class="form-control" style="cursor: pointer;">
           <option value="full">Full Access (Add & Delete Items)</option>
           <option value="add">Add Only (Cannot delete others' items)</option>
           <option value="read">Read Only (View list only)</option>
         </select>
       </div>
       
-      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 1rem; border-radius: 12px; font-weight: 800;">Create Account</button>
+      <button type="submit" class="btn-custom btn-primary-custom" style="width: 100%; margin-top: 1rem; padding: 1rem;">Create Account</button>
     </form>
   </div>
 </div>
 
-<div id="reset-pwd-modal" class="base-modal-overlay hidden" aria-labelledby="modal-reset-title" role="dialog" aria-modal="true">
-  <div class="base-modal-box" style="background: var(--bg-color); border: 1px solid var(--glass-border); box-shadow: var(--shadow-soft);">
-    <header class="base-modal-header" style="border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; margin-bottom: 1.5rem;">
-      <h2 id="modal-reset-title" style="font-weight: 800; font-size: 1.25rem; margin: 0;">Reset Password</h2>
-      <button class="base-modal-close" onclick="closeModal('reset-pwd-modal')" aria-label="Close modal">&times;</button>
+<div id="reset-pwd-modal" class="modal-overlay" aria-labelledby="modal-reset-title" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <header class="modal-header">
+      <h2 id="modal-reset-title" class="section-title">Reset Password</h2>
+      <button class="modal-close" onclick="closeModal('reset-pwd-modal')" aria-label="Close modal">&times;</button>
     </header>
     
     <form method="POST" action="{{ url_for('admin_reset_password') }}">
       <input type="hidden" name="username" id="reset-username">
       
-      <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--glass-border);">
-        <p style="margin: 0; font-size: 0.9rem; color: var(--color-muted);">Setting a new password for:</p>
-        <strong id="reset-user-display" style="color: var(--color-primary); font-size: 1.1rem; display: block; margin-top: 0.25rem;"></strong>
+      <div style="background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: var(--radius-sm); margin-bottom: 2rem; border: 1px solid var(--glass-border);">
+        <p class="form-label" style="margin: 0;">Setting a new password for:</p>
+        <strong id="reset-user-display" style="color: var(--color-primary); font-size: 1.25rem; display: block; margin-top: 0.25rem;"></strong>
       </div>
       
-      <div class="form-group" style="margin-bottom: 1.5rem;">
-        <label for="reset-password-input" style="font-weight: 600; font-size: 0.9rem; color: var(--color-muted); display: block; margin-bottom: 0.5rem;">New Password</label>
-        <input type="password" id="reset-password-input" name="new_password" required placeholder="••••••••" style="width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: #fff;">
+      <div class="form-group" style="margin-bottom: 2rem;">
+        <label for="reset-password-input" class="form-label">New Password</label>
+        <input type="password" id="reset-password-input" name="new_password" class="form-control" required placeholder="••••••••">
       </div>
       
-      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; border-radius: 12px; font-weight: 800;">Update Password</button>
+      <button type="submit" class="btn-custom btn-primary-custom" style="width: 100%; padding: 1rem;">Update Password</button>
     </form>
   </div>
 </div>
@@ -384,34 +627,33 @@
 <script>
   // --- Tab Switching Logic ---
   function switchTab(tabId) {
-    // Hide all tab panels
-    document.querySelectorAll('.admin-tab').forEach(tab => {
-      tab.classList.remove('active');
-    });
+    // Hide all tabs & remove active states
+    document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.setAttribute('aria-selected', 'false'));
     
-    // Unselect all tab buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.setAttribute('aria-selected', 'false');
-    });
-    
-    // Show selected tab panel & set button to selected
+    // Activate target tab
     document.getElementById(`tab-${tabId}`).classList.add('active');
     document.getElementById(`btn-${tabId}`).setAttribute('aria-selected', 'true');
   }
 
-  // --- Modal Logic ---
+  // --- Modal & Focus Management ---
+  let previouslyFocusedElement = null;
+
   function openModal(modalId) {
+    previouslyFocusedElement = document.activeElement; // Store for a11y
     const modal = document.getElementById(modalId);
-    modal.classList.remove('hidden');
-    // Set focus to the first input for accessibility
+    modal.classList.add('active');
+    
+    // Focus the first input dynamically for smooth keyboard UX
     setTimeout(() => {
-      const firstInput = modal.querySelector('input');
+      const firstInput = modal.querySelector('input, select, textarea');
       if (firstInput) firstInput.focus();
     }, 100);
   }
 
   function closeModal(modalId) {
-    document.getElementById(modalId).classList.add('hidden');
+    document.getElementById(modalId).classList.remove('active');
+    if (previouslyFocusedElement) previouslyFocusedElement.focus(); // Restore focus
   }
 
   function openResetModal(username) {
@@ -420,31 +662,32 @@
     openModal('reset-pwd-modal');
   }
 
-  // Close modals when clicking outside the modal box
-  document.querySelectorAll('.base-modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', function(e) {
+  // Close modals when clicking the backdrop overlay
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('mousedown', function(e) {
       if (e.target === this) {
-        this.classList.add('hidden');
+        this.classList.remove('active');
       }
     });
   });
 
-  // Close modals on Escape key press
+  // Global Escape key handler for modals
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      document.querySelectorAll('.base-modal-overlay:not(.hidden)').forEach(modal => {
-        modal.classList.add('hidden');
-      });
+      const activeModal = document.querySelector('.modal-overlay.active');
+      if (activeModal) {
+        activeModal.classList.remove('active');
+        if (previouslyFocusedElement) previouslyFocusedElement.focus();
+      }
     }
   });
 
   // --- Confirmation Interceptor ---
-  // Hooks into forms that require confirmation before submitting
   document.querySelectorAll('form.require-confirm').forEach(form => {
     form.addEventListener('submit', function(e) {
-      const msg = this.getAttribute('data-msg') || 'Are you sure you want to proceed?';
+      const msg = this.dataset.msg || 'Are you sure you want to proceed?';
       if (!confirm(msg)) {
-        e.preventDefault(); // Stop submission if user clicks cancel
+        e.preventDefault(); 
       }
     });
   });
