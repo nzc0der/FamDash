@@ -20,8 +20,9 @@ import subprocess
 import sys
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
+from zoneinfo import ZoneInfo
 
 # Ensure project root is on the path for relative imports.
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -64,6 +65,253 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Timezone and datetime helper functions
+# ---------------------------------------------------------------------------
+
+
+def get_timezone_name() -> str:
+    """Return the configured timezone name, defaulting to Australia/Melbourne."""
+    cfg = settings.load_config()
+    return cfg.get("timezone", "Australia/Melbourne")
+
+
+def get_local_now() -> datetime:
+    """Return the current datetime localized to the configured timezone."""
+    tz_name = get_timezone_name()
+    try:
+        tz = ZoneInfo(tz_name)
+    except Exception:
+        tz = ZoneInfo("Australia/Melbourne")
+    return datetime.now(tz)
+
+
+def parse_date_only(dt_val):
+    if not dt_val:
+        return None
+    if isinstance(dt_val, datetime):
+        return dt_val.date()
+    try:
+        val_str = str(dt_val).strip()
+        if " " in val_str:
+            val_str = val_str.split(" ")[0]
+        elif "T" in val_str:
+            val_str = val_str.split("T")[0]
+        return datetime.strptime(val_str, "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
+def event_on_date(ev, target_date) -> bool:
+    start = parse_date_only(ev.get("event_date"))
+    if not start:
+        return False
+    end = parse_date_only(ev.get("end_date"))
+    if end:
+        return start <= target_date <= end
+    return start == target_date
+
+
+def event_in_range(ev, range_start, range_end) -> bool:
+    start = parse_date_only(ev.get("event_date"))
+    if not start:
+        return False
+    end = parse_date_only(ev.get("end_date")) or start
+    return start <= range_end and range_start <= end
+
+
+def build_ai_context(question: str, user_id: int) -> dict:
+    q = question.lower()
+    now_melb = get_local_now()
+    today_date = now_melb.date()
+
+    timeframe = "today"
+    target_dates = [today_date]
+    date_range = None
+
+    if "tomorrow" in q:
+        timeframe = "tomorrow"
+        target_dates = [today_date + timedelta(days=1)]
+    elif "yesterday" in q:
+        timeframe = "yesterday"
+        target_dates = [today_date - timedelta(days=1)]
+    elif "weekend" in q:
+        timeframe = "this weekend"
+        weekday = today_date.weekday()
+        if weekday == 6:  # Sunday
+            sat = today_date - timedelta(days=1)
+            sun = today_date
+        else:
+            sat = today_date + timedelta(days=5 - weekday)
+            sun = sat + timedelta(days=1)
+        date_range = (sat, sun)
+        target_dates = [sat, sun]
+    elif "next week" in q:
+        timeframe = "next week"
+        days_to_next_mon = (7 - today_date.weekday()) % 7
+        if days_to_next_mon == 0:
+            days_to_next_mon = 7
+        next_mon = today_date + timedelta(days=days_to_next_mon)
+        next_sun = next_mon + timedelta(days=6)
+        date_range = (next_mon, next_sun)
+        target_dates = [next_mon + timedelta(days=i) for i in range(7)]
+    elif "this week" in q or "week" in q:
+        timeframe = "this week"
+        date_range = (today_date, today_date + timedelta(days=6))
+        target_dates = [today_date + timedelta(days=i) for i in range(7)]
+
+    context_data = {
+        "current_date": today_date.strftime("%Y-%m-%d"),
+        "current_day_of_week": today_date.strftime("%A"),
+        "query_timeframe": timeframe,
+    }
+
+    # Fetch events
+    all_events = settings.get_all_events()
+    relevant_events = []
+    for ev in all_events:
+        if date_range:
+            if event_in_range(ev, date_range[0], date_range[1]):
+                relevant_events.append({
+                    "title": ev.get("title"),
+                    "event_date": ev.get("event_date"),
+                    "end_date": ev.get("end_date"),
+                    "author": ev.get("author")
+                })
+        else:
+            matched = False
+            for td in target_dates:
+                if event_on_date(ev, td):
+                    matched = True
+                    break
+            if matched:
+                relevant_events.append({
+                    "title": ev.get("title"),
+                    "event_date": ev.get("event_date"),
+                    "end_date": ev.get("end_date"),
+                    "author": ev.get("author")
+                })
+    context_data["events"] = relevant_events
+
+    # Fetch todos
+    is_todo_query = any(k in q for k in ["todo", "task", "do today", "need to do", "done", "what do i"])
+    if is_todo_query or timeframe in ["today", "tomorrow"]:
+        todos = settings.get_todos(user_id)
+        pending_todos = [{"title": t.get("content")} for t in todos if not t.get("done")]
+        context_data["todos"] = pending_todos
+
+    # Fetch announcements
+    is_ann_query = any(k in q for k in ["announcement", "board", "news", "announcements"])
+    if is_ann_query or timeframe == "today" or not is_todo_query:
+        announcements = settings.get_announcements()
+        ann_list = []
+        for ann in announcements[:5]:
+            ann_list.append({
+                "title": ann.get("title"),
+                "body": ann.get("body"),
+                "author": ann.get("author"),
+                "pinned": bool(ann.get("pinned")),
+                "date": ann.get("created_at")[:10] if ann.get("created_at") else None
+            })
+        context_data["announcements"] = ann_list
+
+    # Fetch shopping items
+    is_shopping_query = any(k in q for k in ["shopping", "buy", "grocery", "groceries", "market", "list", "need"])
+    if is_shopping_query:
+        shopping_items = settings.get_shopping_items()
+        context_data["shopping_items"] = [{"item_name": item.get("content")} for item in shopping_items]
+
+    # Fetch notes
+    is_notes_query = any(k in q for k in ["note", "notes", "shared", "memo"])
+    if is_notes_query:
+        notes = settings.get_notes(user_id)
+        context_data["notes"] = [{"title": n.get("title"), "content": n.get("content")} for n in notes]
+
+    return context_data
+
+
+def get_ollama_status() -> tuple[bool, str]:
+    """
+    Check if Ollama is running and has the gemma3:4b model installed.
+    Returns (is_available, error_message).
+    """
+    import requests
+    ollama_url = "http://localhost:11434/api/tags"
+    try:
+        response = requests.get(ollama_url, timeout=3.0)
+        if response.status_code != 200:
+            return False, "Ollama returned an unexpected status code."
+
+        data = response.json()
+        models = data.get("models", [])
+        model_names = [m.get("name") for m in models if m.get("name")]
+
+        # Check if gemma3:4b (or similar alias) is in model_names
+        has_gemma = False
+        for name in model_names:
+            if "gemma3:4b" in name or name == "gemma3:4b":
+                has_gemma = True
+                break
+
+        if not has_gemma:
+            return False, "Ollama is running, but the 'gemma3:4b' model is not installed. Please run 'ollama pull gemma3:4b' to install it."
+
+        return True, ""
+    except requests.exceptions.ConnectionError:
+        return False, "Ollama is not running locally. Please make sure Ollama is started on the server."
+    except Exception as e:
+        return False, f"Could not connect to Ollama: {str(e)}"
+
+
+SYSTEM_PROMPT = """You are the Family Dashboard assistant.
+
+Answer the user's question using ONLY the dashboard data provided to you.
+
+Never invent events, tasks, announcements, times, dates, or other information.
+
+If the requested information is not present in the supplied data, clearly say that the information isn't available.
+
+Keep responses concise, friendly, and natural.
+
+Do not mention internal JSON, databases, SQL, or implementation details.
+
+Do not perform database operations.
+
+You are read-only."""
+
+
+def ask_ollama(question: str, context_data: dict) -> str:
+    """Send the system prompt, retrieved context, and user question to the local Ollama API."""
+    import requests
+    import json
+
+    user_content = f"Dashboard data:\n{json.dumps(context_data, indent=2)}\n\nUser Question: {question}"
+
+    payload = {
+        "model": "gemma3:4b",
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_content}
+        ],
+        "stream": False,
+        "options": {
+            "temperature": 0.0,
+        }
+    }
+
+    try:
+        response = requests.post("http://localhost:11434/api/chat", json=payload, timeout=45.0)
+        if response.status_code == 200:
+            result = response.json()
+            answer = result.get("message", {}).get("content", "").strip()
+            return answer
+        else:
+            raise Exception(f"Ollama returned status code {response.status_code}")
+    except Exception as e:
+        logger.error("Error communicating with Ollama: %s", e)
+        raise e
+
 
 # ---------------------------------------------------------------------------
 # First-run check
@@ -660,6 +908,38 @@ def _register_routes(app: Flask) -> None:
         PROJECT_ROOT,
         "static/sw.js"
     )
+
+    # ------------------------------------------------------------------
+    # AI Assistant API Endpoint
+    # ------------------------------------------------------------------
+
+    @app.route("/api/ai/ask", methods=["POST"])
+    @login_required
+    def ai_ask():
+        payload = request.get_json(silent=True) or {}
+        question = (payload.get("question") or "").strip()
+
+        if not question:
+            return jsonify({"error": "Question is required."}), 400
+
+        # Check Ollama availability and model installation
+        available, err_msg = get_ollama_status()
+        if not available:
+            return jsonify({"error": err_msg}), 503
+
+        # Build context from SQLite
+        try:
+            context_data = build_ai_context(question, session["user_id"])
+        except Exception as e:
+            logger.error("Error building AI context: %s", e)
+            return jsonify({"error": f"Error retrieving dashboard data: {str(e)}"}), 500
+
+        # Ask Ollama
+        try:
+            answer = ask_ollama(question, context_data)
+            return jsonify({"answer": answer})
+        except Exception as e:
+            return jsonify({"error": f"Failed to generate answer from local AI: {str(e)}"}), 500
 
     # ------------------------------------------------------------------
     # Health check endpoint (used by monitoring / systemd watchdog)
