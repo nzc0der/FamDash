@@ -497,6 +497,37 @@
   </div>
 </header>
 
+<section class="card glass-panel delay-2" style="margin-bottom: 2rem;">
+  <header class="section-header">
+    <h2 class="section-title"><span aria-hidden="true">🤖</span> Family AI Assistant</h2>
+    <span class="badge" id="ai-status-badge" style="background: rgba(167, 139, 250, 0.15); color: var(--color-primary);">Local (Gemma 3 4B)</span>
+  </header>
+
+  <div class="ai-assistant-container" style="display: flex; flex-direction: column; gap: 1rem; min-height: 250px;">
+    <!-- Message display area -->
+    <div id="ai-chat-log" style="height: 220px; overflow-y: auto; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--glass-border); border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+      <div class="ai-message system" style="align-self: flex-start; max-width: 85%; background: rgba(255, 255, 255, 0.04); padding: 0.75rem 1rem; border-radius: 12px 12px 12px 0; border: 1px solid var(--glass-border);">
+        <p style="font-size: 0.95rem; margin: 0; line-height: 1.5; color: var(--color-text);">Hi! I'm your Family Assistant. Ask me anything about what's on, tomorrow's events, tasks, announcements, or shopping items.</p>
+      </div>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="ai-loading" style="display: none; align-items: center; gap: 0.5rem; color: var(--color-muted); font-size: 0.85rem; padding-left: 0.5rem;">
+      <div style="width: 14px; height: 14px; border: 2px solid var(--glass-border); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+      Assistant is thinking...
+    </div>
+
+    <!-- Error indicator -->
+    <div id="ai-error-container" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: var(--color-danger); border-radius: 12px; padding: 0.75rem 1rem; font-size: 0.9rem; line-height: 1.5;"></div>
+
+    <!-- Input form -->
+    <form id="ai-chat-form" style="display: flex; gap: 0.75rem;" onsubmit="handleAiSubmit(event)">
+      <input type="text" id="ai-question-input" class="todo-input" placeholder="e.g. What's on today?" required maxlength="300" style="flex: 1; height: 48px; padding: 0 1rem; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); border-radius: 12px; color: #fff;">
+      <button type="submit" id="ai-send-btn" class="btn btn-primary" style="height: 48px; padding: 0 1.5rem; font-weight: 700; border-radius: 12px;">Ask Assistant</button>
+    </form>
+  </div>
+</section>
+
 <div class="dashboard-grid grid-halves">
   <section class="card glass-panel delay-2">
     <header class="section-header">
@@ -661,6 +692,91 @@
 
 {% block extra_scripts %}
 <script>
+  async function handleAiSubmit(event) {
+    event.preventDefault();
+    const inputEl = document.getElementById('ai-question-input');
+    const chatLogEl = document.getElementById('ai-chat-log');
+    const loadingEl = document.getElementById('ai-loading');
+    const errorEl = document.getElementById('ai-error-container');
+    const sendBtnEl = document.getElementById('ai-send-btn');
+
+    const question = inputEl.value.trim();
+    if (!question) return;
+
+    // Clear input and disable controls
+    inputEl.value = '';
+    inputEl.disabled = true;
+    sendBtnEl.disabled = true;
+    errorEl.style.display = 'none';
+
+    // Add user message to log
+    const userMsgDiv = document.createElement('div');
+    userMsgDiv.className = 'ai-message user';
+    userMsgDiv.style.alignSelf = 'flex-end';
+    userMsgDiv.style.maxWidth = '80%';
+    userMsgDiv.style.background = 'rgba(167, 139, 250, 0.15)';
+    userMsgDiv.style.color = '#fff';
+    userMsgDiv.style.padding = '0.75rem 1rem';
+    userMsgDiv.style.borderRadius = '12px 12px 0 12px';
+    userMsgDiv.style.border = '1px solid rgba(167, 139, 250, 0.25)';
+
+    const userText = document.createElement('p');
+    userText.style.fontSize = '0.95rem';
+    userText.style.margin = '0';
+    userText.style.lineHeight = '1.5';
+    userText.textContent = question;
+    userMsgDiv.appendChild(userText);
+    chatLogEl.appendChild(userMsgDiv);
+    chatLogEl.scrollTop = chatLogEl.scrollHeight;
+
+    // Show loading
+    loadingEl.style.display = 'flex';
+
+    try {
+      const response = await fetch('/api/ai/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: question })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Server returned an error');
+      }
+
+      // Add assistant message to log
+      const aiMsgDiv = document.createElement('div');
+      aiMsgDiv.className = 'ai-message assistant';
+      aiMsgDiv.style.alignSelf = 'flex-start';
+      aiMsgDiv.style.maxWidth = '85%';
+      aiMsgDiv.style.background = 'rgba(255, 255, 255, 0.05)';
+      aiMsgDiv.style.padding = '0.75rem 1rem';
+      aiMsgDiv.style.borderRadius = '12px 12px 12px 0';
+      aiMsgDiv.style.border = '1px solid var(--glass-border)';
+
+      const aiText = document.createElement('p');
+      aiText.style.fontSize = '0.95rem';
+      aiText.style.margin = '0';
+      aiText.style.lineHeight = '1.5';
+      aiText.style.color = 'var(--color-text)';
+      aiText.textContent = data.answer;
+      aiMsgDiv.appendChild(aiText);
+      chatLogEl.appendChild(aiMsgDiv);
+      chatLogEl.scrollTop = chatLogEl.scrollHeight;
+
+    } catch (error) {
+      console.error('AI assistant error:', error);
+      errorEl.textContent = error.message;
+      errorEl.style.display = 'block';
+    } finally {
+      loadingEl.style.display = 'none';
+      inputEl.disabled = false;
+      sendBtnEl.disabled = false;
+      inputEl.focus();
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     
     // 1. Initialize UI Animations
