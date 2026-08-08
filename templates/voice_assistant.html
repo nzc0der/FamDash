@@ -1,0 +1,532 @@
+{% extends "base.html" %}
+
+{% block title %}Voice Assistant - FamilyDashboard{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* --- Voice Assistant Core Styling --- */
+  .voice-container {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Mic Visualization Area */
+  .mic-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mic-button-wrapper {
+    position: relative;
+    width: 110px;
+    height: 110px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mic-button {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dk));
+    border: none;
+    outline: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: white;
+    z-index: 2;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 10px 25px rgba(167, 139, 250, 0.4);
+  }
+
+  .mic-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 15px 30px rgba(167, 139, 250, 0.6);
+  }
+
+  .mic-button:active {
+    transform: scale(0.95);
+  }
+
+  /* Listening Waves Animation */
+  .mic-wave {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--color-primary);
+    opacity: 0.15;
+    z-index: 1;
+    pointer-events: none;
+    transform: scale(1);
+  }
+
+  @keyframes pulseWave {
+    0% {
+      transform: scale(0.9);
+      opacity: 0.4;
+    }
+    100% {
+      transform: scale(1.6);
+      opacity: 0;
+    }
+  }
+
+  .recording .mic-wave {
+    animation: pulseWave 1.8s infinite cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .recording .mic-button {
+    background: linear-gradient(135deg, var(--color-danger), #dc2626);
+    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
+  }
+
+  .mic-status {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.5rem;
+  }
+
+  .mic-hint {
+    font-size: 0.9rem;
+    color: var(--color-muted);
+  }
+
+  /* Real-time transcript bubble */
+  .live-transcript-box {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    margin-top: 1.5rem;
+    text-align: left;
+    min-height: 54px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .transcript-text {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--color-text);
+    flex: 1;
+  }
+
+  .transcript-placeholder {
+    color: var(--color-muted);
+    font-style: italic;
+  }
+
+  /* Conversational Chat Style */
+  .chat-box {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: 450px;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.15);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    min-height: 200px;
+  }
+
+  .chat-message {
+    display: flex;
+    flex-direction: column;
+    max-width: 80%;
+    padding: 0.85rem 1.25rem;
+    border-radius: var(--radius-sm);
+    line-height: 1.5;
+    font-size: 0.95rem;
+    animation: fadeInUp 0.4s ease;
+  }
+
+  .chat-message.user {
+    align-self: flex-end;
+    background: rgba(167, 139, 250, 0.15);
+    color: white;
+    border: 1px solid rgba(167, 139, 250, 0.25);
+    border-bottom-right-radius: 2px;
+  }
+
+  .chat-message.assistant {
+    align-self: flex-start;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-bottom-left-radius: 2px;
+  }
+
+  .chat-message-meta {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-muted);
+    margin-bottom: 0.25rem;
+  }
+
+  .chat-message.user .chat-message-meta {
+    color: var(--color-primary);
+    text-align: right;
+  }
+
+  /* Speech control options */
+  .speech-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--color-border);
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .toggle-switch-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255,255,255,0.1);
+    transition: .3s;
+    border-radius: 34px;
+    border: 1px solid var(--color-border);
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary-dk);
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(22px);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="voice-container">
+  <header style="margin-bottom: 1.5rem; text-align: center;">
+    <span style="font-size: 3rem;">🎙️</span>
+    <h1 class="greeting" style="background: linear-gradient(135deg, #ffffff 40%, var(--color-primary) 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem;">Voice Assistant</h1>
+    <p style="color: var(--color-muted); max-width: 500px; margin: 0 auto; font-size: 1.05rem;">Speak and converse hands-free with your smart local Family Assistant.</p>
+  </header>
+
+  <!-- Controls Options -->
+  <section class="speech-controls">
+    <label class="toggle-switch-label">
+      <span>🔊 Read answers aloud (TTS)</span>
+      <div class="toggle-switch">
+        <input type="checkbox" id="tts-toggle" checked>
+        <span class="slider"></span>
+      </div>
+    </label>
+    <button class="btn btn-ghost" id="clear-history-btn" onclick="clearHistory()" style="padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.85rem;">
+      Clear History
+    </button>
+  </section>
+
+  <!-- Visualizer / Recording Widget -->
+  <section class="mic-section" id="mic-container">
+    <div class="mic-button-wrapper">
+      <div class="mic-wave"></div>
+      <button class="mic-button" id="mic-btn" aria-label="Toggle voice input" onclick="toggleListening()">
+        🎤
+      </button>
+    </div>
+    <div class="mic-status" id="mic-status-text">Click the microphone to speak</div>
+    <div class="mic-hint" id="mic-hint-text">Ask "What's on today?" or "What's tomorrow?"</div>
+
+    <div class="live-transcript-box">
+      <span style="font-size: 1.1rem;" aria-hidden="true">💬</span>
+      <div class="transcript-text" id="transcript-live">
+        <span class="transcript-placeholder">Your speech transcription will appear here in real time...</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chat Log History -->
+  <section class="chat-box" id="voice-chat-history">
+    <div class="chat-message assistant">
+      <div class="chat-message-meta">Assistant</div>
+      <p style="margin:0;">I am listening and ready! Tap the mic button to ask a question, and I will search the dashboard and respond back.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  let recognition = null;
+  let isListening = false;
+  let activeSpeech = null;
+
+  // Initialize Speech Recognition
+  function initSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      document.getElementById('mic-status-text').textContent = "Speech Input Not Supported";
+      document.getElementById('mic-hint-text').textContent = "Your browser does not support the Web Speech API. Please use Google Chrome, Safari, or Microsoft Edge.";
+      document.getElementById('mic-btn').disabled = true;
+      document.getElementById('mic-btn').style.opacity = '0.5';
+      return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = false; // Stop listening automatically once they stop speaking
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      isListening = true;
+      document.getElementById('mic-container').classList.add('recording');
+      document.getElementById('mic-status-text').textContent = "Listening...";
+      document.getElementById('mic-hint-text').textContent = "Speak clearly. Tap the red button to finish or cancel.";
+      document.getElementById('transcript-live').innerHTML = '<span class="transcript-placeholder">Listening for speech...</span>';
+
+      // Stop any active TTS if starting to speak
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      stopListeningUI();
+
+      if (event.error === 'not-allowed') {
+        document.getElementById('mic-status-text').textContent = "Microphone Access Denied";
+        document.getElementById('mic-hint-text').textContent = "Please grant microphone permissions in your browser address bar.";
+      } else if (event.error === 'no-speech') {
+        document.getElementById('mic-status-text').textContent = "No Speech Detected";
+        document.getElementById('mic-hint-text').textContent = "Try again when you are ready to speak.";
+      } else {
+        document.getElementById('mic-status-text').textContent = "Error occurred";
+        document.getElementById('mic-hint-text').textContent = `Speech error: ${event.error}`;
+      }
+    };
+
+    recognition.onend = () => {
+      // If we finished without an explicit cancel, we handle final processing
+      if (isListening) {
+        stopListeningUI();
+      }
+    };
+
+    recognition.onresult = (event) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+
+      const activeText = finalTranscript || interimTranscript;
+      if (activeText) {
+        document.getElementById('transcript-live').textContent = activeText;
+      }
+
+      if (finalTranscript) {
+        submitVoiceQuery(finalTranscript);
+      }
+    };
+  }
+
+  function toggleListening() {
+    if (!recognition) {
+      initSpeechRecognition();
+    }
+    if (!recognition) return;
+
+    if (isListening) {
+      recognition.stop();
+      stopListeningUI();
+    } else {
+      try {
+        recognition.start();
+      } catch (err) {
+        console.error("Failed to start speech recognition:", err);
+      }
+    }
+  }
+
+  function stopListeningUI() {
+    isListening = false;
+    document.getElementById('mic-container').classList.remove('recording');
+    document.getElementById('mic-status-text').textContent = "Tap the microphone to speak";
+    document.getElementById('mic-hint-text').textContent = "Ask 'What's on today?' or 'What's tomorrow?'";
+  }
+
+  async function submitVoiceQuery(text) {
+    const cleanQuery = text.trim();
+    if (!cleanQuery) return;
+
+    appendMessage('User', cleanQuery, 'user');
+
+    // Show loading assistant message
+    const loadingId = appendMessage('Assistant', 'Processing your request...', 'assistant', true);
+
+    try {
+      const response = await fetch('/api/ai/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: cleanQuery })
+      });
+
+      const data = await response.json();
+
+      // Remove loading message
+      document.getElementById(loadingId)?.remove();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Server returned an error');
+      }
+
+      appendMessage('Assistant', data.answer, 'assistant');
+      speakText(data.answer);
+
+    } catch (err) {
+      document.getElementById(loadingId)?.remove();
+      appendMessage('Assistant', `Error: ${err.message}`, 'assistant');
+    }
+  }
+
+  function appendMessage(sender, text, roleClass, isLoading = false) {
+    const historyEl = document.getElementById('voice-chat-history');
+    const msgId = 'msg-' + Date.now() + '-' + Math.floor(Math.random()*1000);
+
+    const msgDiv = document.createElement('div');
+    msgDiv.id = msgId;
+    msgDiv.className = `chat-message ${roleClass}`;
+
+    const metaDiv = document.createElement('div');
+    metaDiv.className = 'chat-message-meta';
+    metaDiv.textContent = sender;
+    msgDiv.appendChild(metaDiv);
+
+    const textPara = document.createElement('p');
+    textPara.style.margin = '0';
+    textPara.textContent = text;
+    msgDiv.appendChild(textPara);
+
+    if (isLoading) {
+      msgDiv.style.opacity = '0.7';
+    }
+
+    historyEl.appendChild(msgDiv);
+    historyEl.scrollTop = historyEl.scrollHeight;
+
+    return msgId;
+  }
+
+  function speakText(text) {
+    const ttsEnabled = document.getElementById('tts-toggle').checked;
+    if (!ttsEnabled || !window.speechSynthesis) return;
+
+    // Stop existing speech
+    window.speechSynthesis.cancel();
+
+    // Create Utterance
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    // Choose voice if available
+    const voices = window.speechSynthesis.getVoices();
+    // Prefer natural sounding English voice
+    const voice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google')) ||
+                  voices.find(v => v.lang.startsWith('en')) ||
+                  voices[0];
+    if (voice) {
+      utterance.voice = voice;
+    }
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function clearHistory() {
+    const historyEl = document.getElementById('voice-chat-history');
+    historyEl.innerHTML = `
+      <div class="chat-message assistant">
+        <div class="chat-message-meta">Assistant</div>
+        <p style="margin:0;">History cleared. Ready when you are!</p>
+      </div>
+    `;
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  }
+
+  // Pre-load voices on load
+  if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.getVoices();
+    };
+  }
+
+  // Initialize on DOM load
+  document.addEventListener('DOMContentLoaded', () => {
+    initSpeechRecognition();
+  });
+</script>
+{% endblock %}

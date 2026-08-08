@@ -480,6 +480,11 @@ def _register_routes(app: Flask) -> None:
     # Dashboard (to-dos + notes)
     # ------------------------------------------------------------------
 
+    @app.route("/voice")
+    @login_required
+    def voice_assistant():
+        return render_template("voice_assistant.html")
+
     @app.route("/dashboard")
     @login_required
     def dashboard():
