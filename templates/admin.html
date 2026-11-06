@@ -525,11 +525,43 @@
 
     <section id="tab-maintenance" class="admin-tab admin-card" role="tabpanel" aria-labelledby="btn-maintenance">
       <header style="margin-bottom: 2.5rem;">
-        <h2 class="section-title">System Operations</h2>
-        <p class="section-subtitle">Core system controls and danger zones.</p>
+        <h2 class="section-title">System Operations & Remote Access</h2>
+        <p class="section-subtitle">Core system controls, remote access with Tailscale Funnel, and maintenance settings.</p>
       </header>
       
       <div class="maintenance-grid">
+        <article class="maint-card" style="border-color: {% if config.get('maintenance_mode') %}rgba(245, 158, 11, 0.5){% else %}var(--glass-border){% endif %};">
+          <div class="maint-icon" aria-hidden="true">🚧</div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <h3 class="section-title" style="font-size: 1.25rem;">Maintenance Mode</h3>
+            <span class="badge" style="{% if config.get('maintenance_mode') %}background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);{% else %}background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2);{% endif %}">
+              {{ 'ACTIVE' if config.get('maintenance_mode') else 'INACTIVE' }}
+            </span>
+          </div>
+          <p class="maint-desc">
+            Put the system in maintenance mode. Non-admin users and phone app sync see a 503 Maintenance screen, while admins retain full access to manage the system.
+          </p>
+          <form method="POST" action="{{ url_for('admin_maintenance_toggle') }}" class="require-confirm" data-msg="Are you sure you want to toggle maintenance mode?">
+            <button type="submit" class="btn-custom {% if config.get('maintenance_mode') %}btn-primary-custom{% else %}btn-ghost-custom{% endif %}" style="width: 100%;">
+              {{ 'Deactivate Maintenance Mode' if config.get('maintenance_mode') else 'Activate Maintenance Mode' }}
+            </button>
+          </form>
+        </article>
+
+        <article class="maint-card">
+          <div class="maint-icon" aria-hidden="true">🌐</div>
+          <h3 class="section-title" style="font-size: 1.25rem; margin-bottom: 0.5rem;">Tailscale Funnel</h3>
+          <p class="maint-desc">
+            Expose the Family Dashboard API to the internet securely using Tailscale Funnel so your phone client can connect from anywhere.
+          </p>
+          <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 0.75rem; font-family: monospace; font-size: 0.8rem; margin-bottom: 1rem; color: #a78bfa; overflow-x: auto;">
+            tailscale funnel 80
+          </div>
+          <a href="/phone/download" class="btn-custom btn-ghost-custom" style="width: 100%; text-decoration: none;">
+            📲 Download Phone Client (.html)
+          </a>
+        </article>
+
         <article class="maint-card">
           <div class="maint-icon" aria-hidden="true">🔄</div>
           <h3 class="section-title" style="font-size: 1.25rem; margin-bottom: 0.5rem;">Auto Update</h3>

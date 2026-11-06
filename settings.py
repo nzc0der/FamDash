@@ -797,3 +797,62 @@ def delete_shopping_item(item_id: int) -> None:
     with _get_db() as conn:
         conn.execute("DELETE FROM shopping_items WHERE id = ?", (item_id,))
 
+
+# ---------------------------------------------------------------------------
+# Maintenance Mode & API Token helpers
+# ---------------------------------------------------------------------------
+
+
+def is_maintenance_mode() -> bool:
+    """Check if the system is currently in maintenance mode."""
+    cfg = load_config()
+    return bool(cfg.get("maintenance_mode", False))
+
+
+def set_maintenance_mode(enabled: bool) -> None:
+    """Enable or disable maintenance mode in config.json."""
+    cfg = load_config()
+    cfg["maintenance_mode"] = bool(enabled)
+    save_config(cfg)
+    logger.info("Maintenance mode set to: %s", enabled)
+
+
+def generate_api_token(user_id: int, expires_in_seconds: int = 30 * 86400) -> str:
+    """
+    Generate a signed JWT token for mobile / API authentication.
+    Defaults to 30 days expiration.
+    """
+    import time
+    import jwt
+
+    cfg = load_config()
+    secret = cfg.get("secret_key", "default-fallback-secret-key-32byteslong!")
+    payload = {
+        "user_id": user_id,
+        "exp": int(time.time()) + expires_in_seconds,
+        "iat": int(time.time()),
+    }
+    return jwt.encode(payload, secret, algorithm="HS256")
+
+
+def verify_api_token(token: str) -> Optional[dict]:
+    """
+    Verify a signed JWT token and return the associated user dict if valid.
+    """
+    import jwt
+
+    if not token:
+        return None
+
+    cfg = load_config()
+    secret = cfg.get("secret_key", "default-fallback-secret-key-32byteslong!")
+
+    try:
+        payload = jwt.decode(token, secret, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+        if user_id is None:
+            return None
+        return get_user_by_id(user_id)
+    except Exception as exc:
+        logger.debug("API token validation failed: %s", exc)
+        return None

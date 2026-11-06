@@ -16,7 +16,9 @@ GitHub-based update system with pre-update database backups.
 6. [Auto-Update and Backup System](#6-auto-update-and-backup-system)
 7. [Manual Backup and Restore](#7-manual-backup-and-restore)
 8. [Safe Manual Reset](#8-safe-manual-reset)
-9. [Troubleshooting](#9-troubleshooting)
+9. [Remote Access with Tailscale Funnel & Phone Client](#9-remote-access-with-tailscale-funnel--phone-client)
+10. [Maintenance Mode](#10-maintenance-mode)
+11. [Troubleshooting](#11-troubleshooting)
 
 ---
 
@@ -260,7 +262,66 @@ sudo systemctl start family_dashboard
 
 ---
 
-## 8. Safe Manual Reset
+## 9. Remote Access with Tailscale Funnel & Phone Client
+
+You can access the Family Dashboard API and manage everything remotely from your mobile phone from anywhere in the world using **Tailscale Funnel**, while keeping your HTML app files directly on your phone.
+
+### 9a. Enable Tailscale Funnel on the Host
+
+1. Ensure Tailscale is installed and authenticated on your Raspberry Pi:
+   ```bash
+   tailscale up
+   ```
+2. Enable Tailscale Funnel to route public HTTPS requests to the Family Dashboard server (e.g. port 80 or your configured port):
+   ```bash
+   tailscale funnel 80
+   ```
+   Tailscale will display your public Funnel URL, such as:
+   ```
+   https://raspberrypi.your-tailnet.ts.net
+   ```
+
+### 9b. Store HTML Client Files on Your Phone
+
+1. Download the standalone mobile client directly from your dashboard:
+   - Navigate to `http://<your-pi-ip>/phone/download` in your mobile browser, or tap **Download Phone Client** under the **Admin** panel.
+   - Alternatively, copy `phone/index.html` directly onto your phone's storage (e.g., via Files, AirDrop, or local transfer).
+2. Open the downloaded `family_dashboard.html` (or `index.html`) on your phone browser (it works directly from local device storage or `file:///`).
+3. Tap **Server Settings** (⚙️) in the top right corner.
+4. Enter your Tailscale Funnel URL (e.g., `https://raspberrypi.your-tailnet.ts.net`) and tap **Save URL & Connect**.
+5. Log in with your family username or guest account. All UI and HTML files stay permanently on your phone, syncing live data with the server via the REST API over Tailscale Funnel.
+
+---
+
+## 10. Maintenance Mode
+
+Maintenance mode allows system administrators to temporarily pause regular family access and mobile app synchronization during database migrations, hardware maintenance, or software updates.
+
+### How it behaves
+
+- **Normal users**: Web requests receive a stylized 503 Maintenance page (`templates/maintenance.html`) informing them that the system is down for maintenance. API requests return HTTP 503 JSON with `{"maintenance": true}`.
+- **Phone clients**: The phone HTML app displays a persistent top banner indicating maintenance mode is active.
+- **System Administrators**: Admins can log in, access the Admin panel, and use API endpoints without restriction.
+
+### Toggling Maintenance Mode
+
+#### Via Admin Panel:
+1. Log in as an administrator.
+2. Navigate to **Admin** &rarr; **System Maintenance**.
+3. Under **Maintenance Mode**, click **Activate Maintenance Mode** (or **Deactivate Maintenance Mode**).
+
+#### Via API:
+Send a POST request with an admin bearer token to `/api/admin/maintenance`:
+```bash
+curl -X POST https://your-server/api/admin/maintenance \
+  -H "Authorization: Bearer <ADMIN_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true}'
+```
+
+---
+
+## 11. Troubleshooting
 
 > **Warning:** This erases all user accounts, to-dos, notes, and
 > announcements. Back up first.

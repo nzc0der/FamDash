@@ -7,6 +7,12 @@ from server import create_app
 class PushNotificationsApiTests(unittest.TestCase):
     def setUp(self):
         settings.init_schema()
+        # Ensure user with id=1 exists so foreign key constraint passes
+        if not settings.get_user_by_id(1):
+            try:
+                settings.add_user("admin", "password123", role="admin")
+            except Exception:
+                pass
 
     def test_subscribe_endpoint_requires_valid_payload(self):
         app = create_app()
