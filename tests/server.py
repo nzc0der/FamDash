@@ -35,6 +35,7 @@ from flask import (
     Flask,
     abort,
     flash,
+    g,
     redirect,
     render_template,
     request,
@@ -128,6 +129,49 @@ def login_required(f):
     return decorated
 
 
+def api_auth_required(f):
+    """
+    Authenticate API requests via Session or Bearer JWT token.
+    Populates g.current_user and ensures user_id and role are available.
+    """
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # 1. Check Bearer token in Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+            user = settings.verify_api_token(token)
+            if user:
+                g.current_user = user
+                return f(*args, **kwargs)
+            return jsonify({"error": "Invalid or expired token"}), 401
+
+        # 2. Check Flask session
+        if "user_id" in session:
+            user = settings.get_user_by_id(session["user_id"])
+            if user:
+                g.current_user = user
+                return f(*args, **kwargs)
+
+        return jsonify({"error": "Authentication required"}), 401
+
+    return decorated
+
+
+def api_admin_required(f):
+    """Require admin role for API endpoints."""
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user = getattr(g, "current_user", None)
+        if not user or user.get("role") != "admin":
+            return jsonify({"error": "Admin access required"}), 403
+        return f(*args, **kwargs)
+
+    return decorated
+
+
 def admin_required(f):
     """Abort with 403 unless the logged-in user has the admin role."""
 
@@ -146,6 +190,68 @@ def admin_required(f):
 
 
 def _register_routes(app: Flask) -> None:
+
+    @app.before_request
+    def handle_cors_preflight():
+        if request.method == "OPTIONS" and request.path.startswith("/api/"):
+            res = app.make_default_options_response()
+            origin = request.headers.get("Origin") or "*"
+            res.headers["Access-Control-Allow-Origin"] = origin
+            res.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            res.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+            res.headers["Access-Control-Allow-Credentials"] = "true"
+            return res
+
+    @app.after_request
+    def apply_cors_headers(response):
+        if request.path.startswith("/api/"):
+            origin = request.headers.get("Origin") or "*"
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
+
+    @app.before_request
+    def check_maintenance_mode():
+        if not settings.is_maintenance_mode():
+            return None
+
+        path = request.path
+        if path.startswith("/static/") or path in ("/sw.js", "/healthz"):
+            return None
+
+        if path.startswith("/api/"):
+            if path in ("/api/maintenance", "/api/auth/login", "/api/auth/logout"):
+                return None
+
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Bearer "):
+                user = settings.verify_api_token(auth_header[7:].strip())
+                if user and user.get("role") == "admin":
+                    return None
+
+            if session.get("role") == "admin":
+                return None
+
+            return jsonify({
+                "maintenance": True,
+                "message": "System is currently in maintenance mode."
+            }), 503
+
+        if path in ("/login", "/logout"):
+            return None
+
+        if session.get("role") == "admin":
+            return None
+
+        return render_template("maintenance.html"), 503
+
+    @app.route("/api/maintenance", methods=["GET"])
+    def api_maintenance_status():
+        return jsonify({
+            "maintenance": settings.is_maintenance_mode()
+        })
 
     @app.before_request
     def check_ui_mode():
@@ -340,6 +446,8 @@ def _register_routes(app: Flask) -> None:
             if pinned and session.get("role") != "admin":
                 pinned = False
             announcement_id = settings.add_announcement(session["user_id"], title, body, pinned)
+            flash("Announcement posted successfully.", "success")
+            # Send push in a background thread so the HTTP response is not delayed.
             push_service.send_announcement_push(announcement_id)
         return redirect(url_for("board"))
 
@@ -360,8 +468,317 @@ def _register_routes(app: Flask) -> None:
         if not endpoint or not p256dh or not auth:
             return jsonify({"error": "Missing required push subscription fields."}), 400
 
-        settings.save_push_subscription(session["user_id"], endpoint, p256dh, auth)
+        sub_id = settings.save_push_subscription(session["user_id"], endpoint, p256dh, auth)
+        logger.info(
+            "Push subscription saved (id=%s) for user %s.",
+            sub_id,
+            session.get("username"),
+        )
+        return jsonify({"status": "ok", "id": sub_id})
+
+    @app.route("/api/notifications/unsubscribe", methods=["POST"])
+    @login_required
+    def notification_unsubscribe():
+        """Remove a push subscription by endpoint URL."""
+        payload = request.get_json(silent=True) or {}
+        endpoint = (payload.get("endpoint") or "").strip()
+        if not endpoint:
+            return jsonify({"error": "endpoint is required"}), 400
+        # Look up the subscription by endpoint.
+        with settings._get_db() as conn:
+            row = conn.execute(
+                "SELECT id FROM push_subscriptions WHERE endpoint = ? AND user_id = ?",
+                (endpoint, session["user_id"]),
+            ).fetchone()
+        if row:
+            settings.delete_push_subscription(row["id"])
+            logger.info(
+                "Push subscription %s removed for user %s.",
+                row["id"],
+                session.get("username"),
+            )
         return jsonify({"status": "ok"})
+
+    # ------------------------------------------------------------------
+    # REST API endpoints (Tailscale Funnel / Mobile / Phone Client)
+    # ------------------------------------------------------------------
+
+    @app.route("/api/auth/login", methods=["POST"])
+    def api_login():
+        payload = request.get_json(silent=True) or request.form or {}
+        username = (payload.get("username") or "").strip().lower()
+        password = payload.get("password", "")
+
+        if username == "guest":
+            guest = settings.get_user_by_username("guest")
+            if guest:
+                token = settings.generate_api_token(guest["id"])
+                user_info = {
+                    "id": guest["id"],
+                    "username": guest["username"],
+                    "role": guest["role"],
+                    "shopping_permission": guest.get("shopping_permission", "read"),
+                }
+                return jsonify({"token": token, "user": user_info})
+            return jsonify({"error": "Guest account not configured"}), 400
+
+        user = settings.verify_user(username, password)
+        if user:
+            token = settings.generate_api_token(user["id"])
+            user_info = {
+                "id": user["id"],
+                "username": user["username"],
+                "role": user["role"],
+                "shopping_permission": user.get("shopping_permission", "full"),
+            }
+            return jsonify({"token": token, "user": user_info})
+
+        return jsonify({"error": "Invalid username or password"}), 401
+
+    @app.route("/api/auth/me", methods=["GET"])
+    @api_auth_required
+    def api_me():
+        user = g.current_user
+        return jsonify({
+            "id": user["id"],
+            "username": user["username"],
+            "role": user["role"],
+            "shopping_permission": user.get("shopping_permission", "full"),
+        })
+
+    @app.route("/api/auth/logout", methods=["POST"])
+    def api_logout():
+        session.clear()
+        return jsonify({"status": "ok", "message": "Logged out"})
+
+    @app.route("/api/dashboard", methods=["GET"])
+    @api_auth_required
+    def api_dashboard():
+        user_id = g.current_user["id"]
+        todos = settings.get_todos(user_id)
+        notes = settings.get_notes(user_id)
+        announcements = settings.get_announcements()
+        bookmarks = settings.get_bookmarks()
+        events = settings.get_events()
+        shopping = settings.get_shopping_items()
+        return jsonify({
+            "todos": todos,
+            "notes": notes,
+            "announcements": announcements,
+            "bookmarks": bookmarks,
+            "events": events,
+            "shopping": shopping,
+        })
+
+    # --- API: To-dos ---
+    @app.route("/api/todos", methods=["GET"])
+    @api_auth_required
+    def api_todos_list():
+        todos = settings.get_todos(g.current_user["id"])
+        return jsonify(todos)
+
+    @app.route("/api/todos", methods=["POST"])
+    @api_auth_required
+    def api_todo_add():
+        if g.current_user.get("role") == "guest":
+            return jsonify({"error": "Guests cannot add to-dos"}), 403
+        payload = request.get_json(silent=True) or request.form or {}
+        content = (payload.get("content") or "").strip()
+        if not content:
+            return jsonify({"error": "Content cannot be empty"}), 400
+        todo_id = settings.add_todo(g.current_user["id"], content)
+        return jsonify({"status": "ok", "id": todo_id}), 201
+
+    @app.route("/api/todos/<int:todo_id>/toggle", methods=["POST"])
+    @api_auth_required
+    def api_todo_toggle(todo_id: int):
+        settings.toggle_todo(todo_id, g.current_user["id"])
+        return jsonify({"status": "ok"})
+
+    @app.route("/api/todos/<int:todo_id>", methods=["DELETE"])
+    @api_auth_required
+    def api_todo_delete(todo_id: int):
+        settings.delete_todo(todo_id, g.current_user["id"])
+        return jsonify({"status": "ok"})
+
+    # --- API: Notes ---
+    @app.route("/api/notes", methods=["GET"])
+    @api_auth_required
+    def api_notes_list():
+        notes = settings.get_notes(g.current_user["id"])
+        return jsonify(notes)
+
+    @app.route("/api/notes", methods=["POST"])
+    @api_auth_required
+    def api_note_save():
+        if g.current_user.get("role") == "guest":
+            return jsonify({"error": "Guests cannot save notes"}), 403
+        payload = request.get_json(silent=True) or request.form or {}
+        note_id = payload.get("id") or payload.get("note_id")
+        note_id = int(note_id) if note_id and str(note_id).isdigit() else None
+        title = (payload.get("title") or "").strip()
+        content = (payload.get("content") or "").strip()
+
+        if not title and not content:
+            return jsonify({"error": "Title or content required"}), 400
+
+        saved_id = settings.upsert_note(g.current_user["id"], note_id, title, content)
+        return jsonify({"status": "ok", "id": saved_id}), 200 if note_id else 201
+
+    @app.route("/api/notes/<int:note_id>", methods=["DELETE"])
+    @api_auth_required
+    def api_note_delete(note_id: int):
+        settings.delete_note(note_id, g.current_user["id"])
+        return jsonify({"status": "ok"})
+
+    # --- API: Announcements ---
+    @app.route("/api/announcements", methods=["GET"])
+    @api_auth_required
+    def api_announcements_list():
+        announcements = settings.get_announcements()
+        return jsonify(announcements)
+
+    @app.route("/api/announcements", methods=["POST"])
+    @api_auth_required
+    def api_announcement_add():
+        if g.current_user.get("role") == "guest":
+            return jsonify({"error": "Guests cannot post announcements"}), 403
+        payload = request.get_json(silent=True) or request.form or {}
+        title = (payload.get("title") or "").strip()
+        body = (payload.get("body") or "").strip()
+        pinned = bool(payload.get("pinned", False))
+
+        if not title:
+            return jsonify({"error": "Title is required"}), 400
+
+        if pinned and g.current_user.get("role") != "admin":
+            pinned = False
+
+        ann_id = settings.add_announcement(g.current_user["id"], title, body, pinned)
+        try:
+            push_service.send_announcement_push(ann_id)
+        except Exception as exc:
+            logger.warning("Push send failed: %s", exc)
+        return jsonify({"status": "ok", "id": ann_id}), 201
+
+    @app.route("/api/announcements/<int:ann_id>", methods=["DELETE"])
+    @api_auth_required
+    @api_admin_required
+    def api_announcement_delete(ann_id: int):
+        settings.delete_announcement(ann_id)
+        return jsonify({"status": "ok"})
+
+    @app.route("/api/announcements/<int:ann_id>/pin", methods=["POST"])
+    @api_auth_required
+    @api_admin_required
+    def api_announcement_pin(ann_id: int):
+        settings.toggle_pin(ann_id)
+        return jsonify({"status": "ok"})
+
+    # --- API: Shopping ---
+    @app.route("/api/shopping", methods=["GET"])
+    @api_auth_required
+    def api_shopping_list():
+        items = settings.get_shopping_items()
+        return jsonify(items)
+
+    @app.route("/api/shopping", methods=["POST"])
+    @api_auth_required
+    def api_shopping_add():
+        if g.current_user.get("shopping_permission") == "read":
+            return jsonify({"error": "Permission denied"}), 403
+        payload = request.get_json(silent=True) or request.form or {}
+        content = (payload.get("content") or payload.get("item_name") or "").strip()
+        if not content:
+            return jsonify({"error": "Item content is required"}), 400
+        item_id = settings.add_shopping_item(content, g.current_user["id"])
+        return jsonify({"status": "ok", "id": item_id}), 201
+
+    @app.route("/api/shopping/<int:item_id>", methods=["DELETE"])
+    @api_auth_required
+    def api_shopping_delete(item_id: int):
+        perm = g.current_user.get("shopping_permission")
+        if g.current_user.get("role") != "admin" and perm in ("read", "add"):
+            return jsonify({"error": "Permission denied"}), 403
+        settings.delete_shopping_item(item_id)
+        return jsonify({"status": "ok"})
+
+    # --- API: Events ---
+    @app.route("/api/events", methods=["GET"])
+    @api_auth_required
+    def api_events_list():
+        events = settings.get_all_events()
+        return jsonify(events)
+
+    @app.route("/api/events", methods=["POST"])
+    @api_auth_required
+    def api_event_add():
+        if g.current_user.get("role") == "guest":
+            return jsonify({"error": "Guests cannot add events"}), 403
+        payload = request.get_json(silent=True) or request.form or {}
+        title = (payload.get("title") or "").strip()
+        event_date = (payload.get("event_date") or "").strip()
+        end_date = (payload.get("end_date") or "").strip() or None
+        color = (payload.get("color") or "").strip() or None
+
+        if not title or not event_date:
+            return jsonify({"error": "Title and start date are required"}), 400
+
+        event_id = settings.add_event(g.current_user["id"], title, event_date, end_date, color)
+        return jsonify({"status": "ok", "id": event_id}), 201
+
+    @app.route("/api/events/<int:event_id>", methods=["DELETE"])
+    @api_auth_required
+    def api_event_delete(event_id: int):
+        event = settings.get_event(event_id)
+        if not event:
+            return jsonify({"error": "Event not found"}), 404
+        if g.current_user.get("role") != "admin" and g.current_user.get("id") != event.get("author_id"):
+            return jsonify({"error": "Permission denied"}), 403
+        settings.delete_event(event_id)
+        return jsonify({"status": "ok"})
+
+    # --- API: Bookmarks ---
+    @app.route("/api/bookmarks", methods=["GET"])
+    @api_auth_required
+    def api_bookmarks_list():
+        bookmarks = settings.get_bookmarks()
+        return jsonify(bookmarks)
+
+    @app.route("/api/bookmarks", methods=["POST"])
+    @api_auth_required
+    def api_bookmark_add():
+        payload = request.get_json(silent=True) or request.form or {}
+        title = (payload.get("title") or "").strip()
+        url = (payload.get("url") or "").strip()
+        icon = (payload.get("icon") or "🌐").strip()
+
+        if not title or not url:
+            return jsonify({"error": "Title and URL are required"}), 400
+        if not url.startswith("http"):
+            url = "https://" + url
+
+        bm_id = settings.add_bookmark(title, url, icon)
+        return jsonify({"status": "ok", "id": bm_id}), 201
+
+    @app.route("/api/bookmarks/<int:bm_id>", methods=["DELETE"])
+    @api_auth_required
+    @api_admin_required
+    def api_bookmark_delete(bm_id: int):
+        settings.delete_bookmark(bm_id)
+        return jsonify({"status": "ok"})
+
+    @app.route("/api/admin/maintenance", methods=["POST"])
+    @api_auth_required
+    @api_admin_required
+    def api_admin_maintenance_toggle():
+        payload = request.get_json(silent=True) or request.form or {}
+        if "enabled" in payload:
+            enabled = bool(payload.get("enabled"))
+        else:
+            enabled = not settings.is_maintenance_mode()
+        settings.set_maintenance_mode(enabled)
+        return jsonify({"status": "ok", "maintenance": enabled})
 
     @app.route("/board/delete/<int:ann_id>", methods=["POST"])
     @login_required
@@ -553,6 +970,17 @@ def _register_routes(app: Flask) -> None:
             flash(f"Error creating user: {e}", "danger")
         return redirect(url_for("admin_panel"))
 
+    @app.route("/admin/maintenance/toggle", methods=["POST"])
+    @login_required
+    @admin_required
+    def admin_maintenance_toggle():
+        current = settings.is_maintenance_mode()
+        new_state = not current
+        settings.set_maintenance_mode(new_state)
+        state_str = "activated" if new_state else "deactivated"
+        flash(f"Maintenance mode {state_str}.", "success" if not new_state else "warning")
+        return redirect(url_for("admin_panel"))
+
     @app.route("/admin/update", methods=["POST"])
     @login_required
     @admin_required
@@ -653,13 +1081,41 @@ def _register_routes(app: Flask) -> None:
         except ValueError as e:
             flash(str(e), "danger")
         return redirect(url_for("admin_panel"))
+
+    @app.route("/phone", methods=["GET"])
+    def phone_client():
+        """Serve the standalone phone client directly."""
+        phone_dir = os.path.join(PROJECT_ROOT, "phone")
+        return send_from_directory(phone_dir, "index.html")
+
+    @app.route("/phone/download", methods=["GET"])
+    def phone_download():
+        """Allow downloading the index.html client file to save locally on a phone."""
+        phone_dir = os.path.join(PROJECT_ROOT, "phone")
+        return send_from_directory(
+            phone_dir,
+            "index.html",
+            as_attachment=True,
+            download_name="family_dashboard.html"
+        )
     
     @app.route("/sw.js")
     def service_worker():
-        return send_from_directory(
-        PROJECT_ROOT,
-        "static/sw.js"
-    )
+        """Serve the service worker from the root scope with no-cache headers.
+
+        Service workers must be served from the root of the origin to control
+        the entire site.  The no-cache headers ensure the browser always
+        fetches the latest version.
+        """
+        response = send_from_directory(
+            os.path.join(PROJECT_ROOT, "static"),
+            "sw.js",
+            mimetype="application/javascript",
+        )
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
 
     # ------------------------------------------------------------------
     # Health check endpoint (used by monitoring / systemd watchdog)

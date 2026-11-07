@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Under Maintenance - Family Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --color-bg: #050508;
+      --color-surface: rgba(17, 17, 24, 0.85);
+      --color-border: rgba(255, 255, 255, 0.08);
+      --color-primary: #a78bfa;
+      --color-warning: #f59e0b;
+      --color-text: #fcfcfd;
+      --color-muted: #94a3b8;
+      --radius: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', -apple-system, sans-serif;
+      background: var(--color-bg);
+      background-image:
+        radial-gradient(circle at 50% 30%, rgba(245, 158, 11, 0.12), transparent 60%),
+        radial-gradient(circle at 100% 100%, rgba(167, 139, 250, 0.08), transparent 50%);
+      color: var(--color-text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 3rem 2.5rem;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .icon {
+      font-size: 3.5rem;
+      margin-bottom: 1.25rem;
+      display: inline-block;
+      animation: pulse 2.5s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.02em;
+    }
+
+    p {
+      color: var(--color-muted);
+      line-height: 1.6;
+      margin-bottom: 2rem;
+      font-size: 1rem;
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.85rem 1.5rem;
+      border-radius: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-admin {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+    }
+
+    .btn-admin:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-reload {
+      background: var(--color-primary);
+      color: #fff;
+    }
+
+    .btn-reload:hover {
+      filter: brightness(1.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🛠️</div>
+    <h1>Maintenance Mode</h1>
+    <p>Family Dashboard is temporarily down for scheduled updates or maintenance. Please check back shortly.</p>
+    <div class="actions">
+      <button class="btn btn-reload" onclick="window.location.reload()">Check Again</button>
+      <a href="{{ url_for('login') }}" class="btn btn-admin">Admin Login</a>
+    </div>
+  </div>
+</body>
+</html>
